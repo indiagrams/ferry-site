@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["G5H628C6WR.com.indiagram.ferry"],
+        "components": [
+          { "/": "/i/*", "comment": "Ferry invite links" }
+        ]
+      }
+    ]
+  }
+}

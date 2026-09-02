@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ferry</title>
+  <meta name="description" content="Share a photo or file with a person in three taps. No account, no server.">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root { --bg: #F2F3F6; --surface: #FFFFFF; --ink: #0E1C2A; --muted: #6B7785; --accent: #1B5E9E; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #000000; --surface: #161C24; --ink: #F2F4F7; --muted: #8A96A3; --accent: #5B9BE0; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 48px 24px; text-align: center; }
+    .icon { width: 120px; height: 120px; border-radius: 27px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+    .icon svg { display: block; width: 100%; height: 100%; }
+    h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+    p { font-size: 17px; line-height: 1.45; color: var(--muted); margin: 0; max-width: 34ch; }
+    .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 28px; border-radius: 14px; background: var(--accent); color: #fff; font-size: 17px; font-weight: 600; text-decoration: none; }
+    .invite { display: none; background: var(--surface); border-radius: 16px; padding: 18px 22px; max-width: 420px; }
+    .invite p { color: var(--ink); }
+    body.is-invite .invite { display: block; }
+    footer { font-size: 13px; color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="icon" aria-hidden="true">
+      <svg viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2571B8"/><stop offset="1" stop-color="#164C82"/></linearGradient></defs>
+      <rect width="100" height="100" fill="url(#g)"/>
+      <g fill="#fff"><rect x="36" y="34" width="28" height="14" rx="3"/><rect x="41" y="38" width="5" height="5" fill="#1B5E9E"/><rect x="54" y="38" width="5" height="5" fill="#1B5E9E"/><path d="M22 52 H78 L70 66 H30 Z"/></g>
+      <path d="M14 76 Q22 70 30 76 T46 76 T62 76 T78 76 T94 76" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+      <path d="M20 86 Q28 80 36 86 T52 86 T68 86 T84 86" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.45"/></svg>
+    </div>
+    <h1>Ferry</h1>
+    <p>Share a photo or file with a person in three taps. No account, no sign-in, no server.</p>
+    <div class="invite">
+      <p>Someone invited you to share with them on Ferry. Get the app, then tap the invite link again and you're paired.</p>
+    </div>
+    <a class="cta" href="#">Coming soon to the App Store</a>
+    <footer>Made by <a href="https://indiagram.com">indiagram</a></footer>
+  </main>
+  <script>
+    if (location.pathname.indexOf('/i/') === 0) { document.body.classList.add('is-invite'); }
+  </script>
+</body>
+</html>
