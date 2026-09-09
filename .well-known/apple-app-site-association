@@ -4,7 +4,8 @@
       {
         "appIDs": ["G5H628C6WR.com.indiagram.ferry"],
         "components": [
-          { "/": "/i/*", "comment": "Ferry invite links" }
+          { "/": "/i/*", "comment": "Ferry invite links" },
+          { "/": "/o/*", "comment": "Ferry open links (the nudge, Phase 7)" }
         ]
       }
     ]

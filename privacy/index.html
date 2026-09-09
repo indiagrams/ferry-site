@@ -3,19 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ferry</title>
-  <meta name="description" content="Send photos and files straight to people you know.">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Ferry">
-  <meta property="og:description" content="Send photos and files straight to people you know.">
-  <meta property="og:image" content="https://ferry.indiagram.com/og.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:url" content="https://ferry.indiagram.com/">
+  <title>Privacy — Ferry</title>
+  <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#F2F3F6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="referrer" content="no-referrer">
-  <meta name="color-scheme" content="light dark">
   <style>
     :root { --bg: #F2F3F6; --surface: #FFFFFF; --ink: #0E1C2A; --muted: #525C67; --accent: #1B5E9E; --on-accent: #FFFFFF; }
     @media (prefers-color-scheme: dark) { :root { --bg: #000000; --surface: #161C24; --ink: #F2F4F7; --muted: #A9ABAD; --accent: #5B9BE0; --on-accent: #161C24; } }
@@ -43,28 +35,12 @@
 </head>
 <body>
   <main>
-    <div id="tile" aria-hidden="true">
-      <svg viewBox="0 0 1024 1024">
-        <rect width="1024" height="1024" fill="#1B5E9E"/>
-        <polygon fill="#FFFFFF" points="184.32,491.52 839.68,491.52 778.24,614.4 245.76,614.4"/>
-        <rect fill="#FFFFFF" x="331.78" y="358.4" width="360.45" height="154.45" rx="21.33"/>
-        <path stroke="#FFFFFF" stroke-width="42.67" stroke-linecap="butt" fill="none" d="M184.32 737.28H839.68M184.32 860.16H839.68"/>
-      </svg>
-    </div>
-    <h1>Ferry</h1>
-    <p id="what">Send photos and files straight to people you know.</p>
-    <section id="invite"><p>Someone invited you to share with them on Ferry.</p></section>
-    <p id="testing">Ferry is in private testing. It comes through Apple's TestFlight app, so getting it takes two steps.</p>
-    <a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>
-    <!-- <a id="get-ferry" class="button prominent" href="TESTFLIGHT_JOIN_URL">Get Ferry</a> -->
-    <p id="again">Then go back to the message and tap the invite link again. That's what pairs you.</p>
-    <a id="open-ferry" class="button secondary" href="ferry://i">Already have Ferry? Open it</a>
-    <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/privacy">Privacy</a></footer>
+    <h1>Privacy</h1>
+    <p>Ferry has no account and no server of its own. Nothing about you or what you share is collected or sent to indiagram.</p>
+    <p>What you share goes from your phone to the person you chose, encrypted on the way, and is not kept anywhere in between.</p>
+    <p>Ferry keeps a short record on your phone of what it did, so you can send a report if something goes wrong. You choose when to send it and who gets it. It says what Ferry did and when, with names taken out, and it never includes your photos or files.</p>
+    <p>Ferry has no analytics, no ads and no tracking. This page loads nothing from anywhere else.</p>
+    <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/">Ferry</a></footer>
   </main>
-  <script>
-    if (location.pathname.indexOf('/i/') === 0) { document.body.classList.add('is-invite'); }
-    var open = document.getElementById('open-ferry');
-    if (open && location.hash) { open.href = 'ferry://i' + location.hash; }
-  </script>
 </body>
 </html>

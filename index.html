@@ -4,46 +4,67 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ferry</title>
-  <meta name="description" content="Share a photo or file with a person in three taps. No account, no server.">
+  <meta name="description" content="Send photos and files straight to people you know.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Ferry">
+  <meta property="og:description" content="Send photos and files straight to people you know.">
+  <meta property="og:image" content="https://ferry.indiagram.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://ferry.indiagram.com/">
+  <meta name="theme-color" content="#F2F3F6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
   <style>
-    :root { --bg: #F2F3F6; --surface: #FFFFFF; --ink: #0E1C2A; --muted: #6B7785; --accent: #1B5E9E; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #000000; --surface: #161C24; --ink: #F2F4F7; --muted: #8A96A3; --accent: #5B9BE0; } }
+    :root { --bg: #F2F3F6; --surface: #FFFFFF; --ink: #0E1C2A; --muted: #525C67; --accent: #1B5E9E; --on-accent: #FFFFFF; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #000000; --surface: #161C24; --ink: #F2F4F7; --muted: #A9ABAD; --accent: #5B9BE0; --on-accent: #161C24; } }
+    html { font-size: 17px; }
+    @supports (font: -apple-system-body) { html { font: -apple-system-body; } }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    main { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 48px 24px; text-align: center; }
-    .icon { width: 120px; height: 120px; border-radius: 27px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
-    .icon svg { display: block; width: 100%; height: 100%; }
-    h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
-    p { font-size: 17px; line-height: 1.45; color: var(--muted); margin: 0; max-width: 34ch; }
-    .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 28px; border-radius: 14px; background: var(--accent); color: #fff; font-size: 17px; font-weight: 600; text-decoration: none; }
-    .status { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 28px; border-radius: 14px; background: var(--surface); color: var(--muted); font-size: 17px; font-weight: 600; }
-    .invite { display: none; background: var(--surface); border-radius: 16px; padding: 18px 22px; max-width: 420px; }
-    .invite p { color: var(--ink); }
-    body.is-invite .invite { display: block; }
-    footer { font-size: 13px; color: var(--muted); }
-    a { color: var(--accent); }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding-top: 48px; padding-bottom: max(48px, env(safe-area-inset-bottom)); padding-left: 24px; padding-right: 24px; text-align: center; }
+    #tile { width: 120px; height: 120px; border-radius: 27px; overflow: hidden; }
+    #tile svg { display: block; width: 100%; height: 100%; }
+    h1 { font-size: 2rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; margin: 0; }
+    p { font-size: 1rem; font-weight: 400; line-height: 1.5; margin: 0; max-width: 34ch; color: var(--ink); }
+    #testing { margin-bottom: 8px; }
+    #invite { background: var(--surface); border-radius: 12px; padding: 16px; max-width: 360px; }
+    .button { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 360px; min-height: 48px; padding: 0 24px; border-radius: 12px; font-size: 1rem; font-weight: 600; line-height: 1.5; text-decoration: none; }
+    .button.prominent { background: var(--accent); color: var(--on-accent); }
+    .button.secondary { background: var(--surface); color: var(--accent); }
+    #get-ferry, #open-ferry { margin-top: 8px; }
+    .label { font-size: 0.882rem; font-weight: 400; line-height: 1.4; color: var(--muted); }
+    footer a { color: var(--accent); display: inline-block; min-height: 44px; line-height: 44px; }
+    #invite, #again, #open-ferry { display: none; }
+    body.is-invite #invite, body.is-invite #again, body.is-invite #open-ferry { display: block; }
+    body.is-invite #open-ferry { display: flex; } /* the fallback is a .button: flex keeps its label centred once shown */
   </style>
 </head>
 <body>
   <main>
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2571B8"/><stop offset="1" stop-color="#164C82"/></linearGradient></defs>
-      <rect width="100" height="100" fill="url(#g)"/>
-      <g fill="#fff"><rect x="36" y="34" width="28" height="14" rx="3"/><rect x="41" y="38" width="5" height="5" fill="#1B5E9E"/><rect x="54" y="38" width="5" height="5" fill="#1B5E9E"/><path d="M22 52 H78 L70 66 H30 Z"/></g>
-      <path d="M14 76 Q22 70 30 76 T46 76 T62 76 T78 76 T94 76" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
-      <path d="M20 86 Q28 80 36 86 T52 86 T68 86 T84 86" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.45"/></svg>
+    <div id="tile" aria-hidden="true">
+      <svg viewBox="0 0 1024 1024">
+        <rect width="1024" height="1024" fill="#1B5E9E"/>
+        <polygon fill="#FFFFFF" points="184.32,491.52 839.68,491.52 778.24,614.4 245.76,614.4"/>
+        <rect fill="#FFFFFF" x="331.78" y="358.4" width="360.45" height="154.45" rx="21.33"/>
+        <path stroke="#FFFFFF" stroke-width="42.67" stroke-linecap="butt" fill="none" d="M184.32 737.28H839.68M184.32 860.16H839.68"/>
+      </svg>
     </div>
     <h1>Ferry</h1>
-    <p>Share a photo or file with a person in three taps. No account, no sign-in, no server.</p>
-    <div class="invite">
-      <p>Someone invited you to share with them on Ferry. Once you have the app, tap the invite link again and you're paired.</p>
-    </div>
-    <p class="status">Ferry is in private testing.</p>
-    <footer>Made by <a href="https://indiagram.com">indiagram</a></footer>
+    <p id="what">Send photos and files straight to people you know.</p>
+    <section id="invite"><p>Someone invited you to share with them on Ferry.</p></section>
+    <p id="testing">Ferry is in private testing. It comes through Apple's TestFlight app, so getting it takes two steps.</p>
+    <a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>
+    <!-- <a id="get-ferry" class="button prominent" href="TESTFLIGHT_JOIN_URL">Get Ferry</a> -->
+    <p id="again">Then go back to the message and tap the invite link again. That's what pairs you.</p>
+    <a id="open-ferry" class="button secondary" href="ferry://i">Already have Ferry? Open it</a>
+    <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/privacy">Privacy</a></footer>
   </main>
   <script>
     if (location.pathname.indexOf('/i/') === 0) { document.body.classList.add('is-invite'); }
+    var open = document.getElementById('open-ferry');
+    if (open && location.hash) { open.href = 'ferry://i' + location.hash; }
   </script>
 </body>
 </html>
