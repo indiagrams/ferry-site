@@ -133,18 +133,23 @@ open(sys.argv[1], "wb").write(hdr + dib + body)
 # ---------------------------------------------------------------------------
 # S-1 — one source, three byte-identical copies (§ 5.1, D-1). Absent (8400e2e):
 # `RED: no i/index.html — …` (measured: absent; 404.html identical).
+# P7-D-21 (2026-09-10) adds the third: /o/ must answer 200, not 404, because a 404
+# is a lie told to every link-preview fetcher and cache that touches a nudge URL in a
+# chat thread — and the page it must answer with is the GENERIC one, never the invite
+# state, whose "Already have Ferry? Open it" is precisely wrong for a visitor who is
+# there because they do not have Ferry. Hence a byte-identical cp, not a new page.
 s1() {
   local rc=0 f
   # Control: cmp must see one appended byte.
   cp index.html "$TMP/copy.html"; printf 'x' >> "$TMP/copy.html"
   if cmp -s index.html "$TMP/copy.html"; then red "control: cmp did not see one appended byte"; return 1; fi
   echo "    control ok (cmp sees one appended byte on a \$TMP copy)"
-  for f in 404.html i/index.html; do
-    test -f "$f" || { red "no $f — /i/ answers 404 without i/index.html, and 404.html is every other path"; rc=1; continue; }
+  for f in 404.html i/index.html o/index.html; do
+    test -f "$f" || { red "no $f — /i/ answers 404 without i/index.html, /o/ answers 404 without o/index.html (P7-D-21), and 404.html is every other path"; rc=1; continue; }
     cmp -s index.html "$f" || { red "$f differs from index.html (one source, three copies — cp it)"; rc=1; }
   done
   test "$rc" -eq 0 || return 1
-  echo "S-1 GREEN (404.html and i/index.html are byte-identical to index.html)"
+  echo "S-1 GREEN (404.html, i/index.html and o/index.html are byte-identical to index.html)"
 }
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ferry</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Send photos and files straight to people you know.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Ferry">
+  <meta property="og:description" content="Send photos and files straight to people you know.">
+  <meta property="og:image" content="https://ferry.indiagram.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://ferry.indiagram.com/">
+  <meta name="theme-color" content="#F2F3F6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root { --bg: #F2F3F6; --surface: #FFFFFF; --ink: #0E1C2A; --muted: #525C67; --accent: #1B5E9E; --on-accent: #FFFFFF; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #000000; --surface: #161C24; --ink: #F2F4F7; --muted: #A9ABAD; --accent: #5B9BE0; --on-accent: #161C24; } }
+    html { font-size: 17px; }
+    @supports (font: -apple-system-body) { html { font: -apple-system-body; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding-top: 48px; padding-bottom: max(48px, env(safe-area-inset-bottom)); padding-left: 24px; padding-right: 24px; text-align: center; }
+    #tile { width: 120px; height: 120px; border-radius: 27px; overflow: hidden; }
+    #tile svg { display: block; width: 100%; height: 100%; }
+    h1 { font-size: 2rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; margin: 0; }
+    p { font-size: 1rem; font-weight: 400; line-height: 1.5; margin: 0; max-width: 34ch; color: var(--ink); }
+    #testing { margin-bottom: 8px; }
+    #invite { background: var(--surface); border-radius: 12px; padding: 16px; max-width: 360px; }
+    .button { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 360px; min-height: 48px; padding: 0 24px; border-radius: 12px; font-size: 1rem; font-weight: 600; line-height: 1.5; text-decoration: none; }
+    .button.prominent { background: var(--accent); color: var(--on-accent); }
+    .button.secondary { background: var(--surface); color: var(--accent); }
+    #get-ferry, #open-ferry { margin-top: 8px; }
+    .label { font-size: 0.882rem; font-weight: 400; line-height: 1.4; color: var(--muted); }
+    footer a { color: var(--accent); display: inline-block; min-height: 44px; line-height: 44px; }
+    #invite, #again, #open-ferry { display: none; }
+    body.is-invite #invite, body.is-invite #again, body.is-invite #open-ferry { display: block; }
+    body.is-invite #open-ferry { display: flex; } /* the fallback is a .button: flex keeps its label centred once shown */
+  </style>
+</head>
+<body>
+  <main>
+    <div id="tile" aria-hidden="true">
+      <svg viewBox="0 0 1024 1024">
+        <rect width="1024" height="1024" fill="#1B5E9E"/>
+        <polygon fill="#FFFFFF" points="184.32,491.52 839.68,491.52 778.24,614.4 245.76,614.4"/>
+        <rect fill="#FFFFFF" x="331.78" y="358.4" width="360.45" height="154.45" rx="21.33"/>
+        <path stroke="#FFFFFF" stroke-width="42.67" stroke-linecap="butt" fill="none" d="M184.32 737.28H839.68M184.32 860.16H839.68"/>
+      </svg>
+    </div>
+    <h1>Ferry</h1>
+    <p id="what">Send photos and files straight to people you know.</p>
+    <section id="invite"><p>Someone invited you to share with them on Ferry.</p></section>
+    <p id="testing">Ferry is in private testing. It comes through Apple's TestFlight app, so getting it takes two steps.</p>
+    <a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>
+    <a id="get-ferry" class="button prominent" href="https://testflight.apple.com/join/W6gEGfAC">Get Ferry</a>
+    <p id="again">Then go back to the message and tap the invite link again. That's what pairs you.</p>
+    <a id="open-ferry" class="button secondary" href="ferry://i">Already have Ferry? Open it</a>
+    <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/privacy">Privacy</a></footer>
+  </main>
+  <script>
+    if (location.pathname.indexOf('/i/') === 0) { document.body.classList.add('is-invite'); }
+    var open = document.getElementById('open-ferry');
+    if (open && location.hash) { open.href = 'ferry://i' + location.hash; }
+  </script>
+</body>
+</html>
