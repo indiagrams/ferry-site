@@ -25,12 +25,10 @@
     .button { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 360px; min-height: 48px; padding: 0 24px; border-radius: 12px; font-size: 1rem; font-weight: 600; line-height: 1.5; text-decoration: none; }
     .button.prominent { background: var(--accent); color: var(--on-accent); }
     .button.secondary { background: var(--surface); color: var(--accent); }
-    #get-ferry, #open-ferry { margin-top: 8px; }
     .label { font-size: 0.882rem; font-weight: 400; line-height: 1.4; color: var(--muted); }
     footer a { color: var(--accent); display: inline-block; min-height: 44px; line-height: 44px; }
-    #invite, #again, #open-ferry { display: none; }
-    body.is-invite #invite, body.is-invite #again, body.is-invite #open-ferry { display: block; }
-    body.is-invite #open-ferry { display: flex; } /* the fallback is a .button: flex keeps its label centred once shown */
+    #invite, #again { display: none; }
+    body.is-invite #invite, body.is-invite #again { display: block; }
   </style>
 </head>
 <body>

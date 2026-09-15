@@ -35,12 +35,10 @@
     .button { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 360px; min-height: 48px; padding: 0 24px; border-radius: 12px; font-size: 1rem; font-weight: 600; line-height: 1.5; text-decoration: none; }
     .button.prominent { background: var(--accent); color: var(--on-accent); }
     .button.secondary { background: var(--surface); color: var(--accent); }
-    #get-ferry, #open-ferry { margin-top: 8px; }
     .label { font-size: 0.882rem; font-weight: 400; line-height: 1.4; color: var(--muted); }
     footer a { color: var(--accent); display: inline-block; min-height: 44px; line-height: 44px; }
-    #invite, #again, #open-ferry { display: none; }
-    body.is-invite #invite, body.is-invite #again, body.is-invite #open-ferry { display: block; }
-    body.is-invite #open-ferry { display: flex; } /* the fallback is a .button: flex keeps its label centred once shown */
+    #invite, #again { display: none; }
+    body.is-invite #invite, body.is-invite #again { display: block; }
   </style>
 </head>
 <body>
@@ -56,17 +54,13 @@
     <h1>Ferry</h1>
     <p id="what">Send photos and files straight to people you know.</p>
     <section id="invite"><p>Someone invited you to share with them on Ferry.</p></section>
-    <p id="testing">Ferry is in private testing. It comes through Apple's TestFlight app, so getting it takes two steps.</p>
+    <p id="testing">Ferry is in private testing and comes through Apple's TestFlight app, so ask the person who invited you to add you to the test.</p>
     <a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>
-    <a id="get-ferry" class="button prominent" href="https://testflight.apple.com/join/W6gEGfAC">Get Ferry</a>
     <p id="again">Then go back to the message and tap the invite link again. That's what pairs you.</p>
-    <a id="open-ferry" class="button secondary" href="ferry://i">Already have Ferry? Open it</a>
     <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/privacy">Privacy</a></footer>
   </main>
   <script>
     if (location.pathname.indexOf('/i/') === 0) { document.body.classList.add('is-invite'); }
-    var open = document.getElementById('open-ferry');
-    if (open && location.hash) { open.href = 'ferry://i' + location.hash; }
   </script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 # $TMP from mktemp with a trap, `command grep`; controls FIRST — a gate is believed
 # only after its net has been seen to catch a mutation).
 #
-# Usage:  bash scripts/site-gates.sh                 # from the site root; all ten
+# Usage:  bash scripts/site-gates.sh                 # from the site root; all eleven
 #         FERRY_SITE_GATES="s3 s7" bash scripts/site-gates.sh   # by name
 # Prints one `S-n GREEN (…)` line per gate, `RED: …` per failure, then
 # `==> site-gates: ok` or `==> site-gates: FAILED` (exit 1). perl, python3, sips,
@@ -20,25 +20,31 @@
 #   gate  guards                                        absent -> prints
 #   S-1   one source, three byte-identical copies       RED: no i/index.html — …
 #         (index.html = 404.html = i/index.html)        RED: <f> differs from index.html (…)
-#   S-2   Get TestFlight then Get Ferry: labels, hrefs, RED: Get TestFlight anchor … = N
-#         DOM order; no TESTFLIGHT_JOIN_URL token; no    RED: Get Ferry anchor … = N …
-#         target=_blank. At commit A (P6-D-18) the Get  RED: Get TestFlight (line a) does not
-#         Ferry anchor is inside an HTML comment, which  precede Get Ferry (line b) — LINK-01's order
-#         strip_html drops: the count is 0, $b is empty,
-#         the token count is 0 (the comment is gone) —
-#         so S-2 prints EXACTLY two reds at A and none
-#         at B (06-10 uncomments the anchor with the link)
+#   S-2   INVERTED 2026-09-15 (D-15). In the RAW bytes RED: <f>: Get TestFlight anchor … = N
+#         of all four served copies: the Get TestFlight  RED: <f>: N line(s) carrying a
+#         button exactly once, and the withdrawn public  testflight.apple.com/join link …
+#         link GONE — zero testflight.apple.com/join,    RED: <f>: N 'id="get-ferry"' …
+#         zero id="get-ferry", no TESTFLIGHT_JOIN_URL
+#         token, no target=_blank. It reads `raw`, never
+#         strip_html: commit A (P6-D-18) proved a link
+#         inside an HTML comment is invisible to every
+#         gate that strips comments — and still served
 #   S-3   the preview card: seven og: tags exact; og.png RED: og:title = "Ferry" sites = N
 #         1200x630, < 300000 bytes, and THAT drawing —   RED: no og.png (…)
 #         four pixels read from a BMP (ground, ground,   RED: og.png pixel (x,y) is #RRGGBB, expected #…
 #         hull, wave), ±2 per channel
-#   S-4   the fallback anchor once; ferry:// twice; the  RED: Already have Ferry? Open it anchor … = N
-#         invite-only display rules written exactly so; RED: ferry:// sites = N (expected exactly 2 …)
-#         the path switch; no visibility/opacity hiding RED: the invite-only rule … = N
-#   S-5   nothing leaves the page: zero request patterns, RED: location.hash sites = N
-#         one inline script, location.hash exactly once  RED: the re-attachment line … = N
-#         on the re-attachment line, no parse/log calls, RED: referrer no-referrer meta = N
-#         the no-referrer meta
+#   S-4   INVERTED 2026-09-15 (D-14): the fragment      RED: ferry:// sites = N in the raw bytes …
+#         fallback is GONE — ferry:// zero times in the  RED: 'Already have Ferry? Open it' anchor = N
+#         raw bytes, no open-ferry anchor and no         RED: the invite-only rule … = N
+#         id="open-ferry"; the invite-only rules are now
+#         #invite and #again, written exactly so; the
+#         path switch; no visibility/opacity hiding
+#   S-5   nothing leaves the page: zero request         RED: location.hash sites = N in the raw
+#         patterns, one inline script, location.hash      bytes (expected 0 …)
+#         ZERO times in the RAW bytes (INVERTED         RED: referrer no-referrer meta = N
+#         2026-09-15, D-14: the page does not read the
+#         fragment at all), no parse/log calls, the
+#         no-referrer meta
 #   S-6   every sentence verbatim; the one sentence ×3;  RED: sentence missing from the page: "…"
 #         V-2's never list and the voice list = 0 over   RED: N never-list hit(s) …
 #         visible text + content= values; html lang=en
@@ -58,15 +64,33 @@
 #         <style> block byte-identical to index.html's;
 #         14 hex literals; one <a href="/">; no-referrer;
 #         and index.html's footer links /privacy once
+#   S-14  the fallback and the link STAY gone (D-17;    RED: <f>: N line(s) carrying '<string>'
+#         cdn-gates.sh owns S-11..S-13): five strings     (expected 0 — …)
+#         — location.hash, ferry://,                    RED: no <f> — S-14 names its files …
+#         testflight.apple.com/join, id="get-ferry",
+#         id="open-ferry" — counted in the RAW bytes of
+#         the four served copies, named one by one (this
+#         script carries all five itself: a glob would
+#         self-match, D-17)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FAILED=0
 red() { echo "RED: $*"; FAILED=1; return 1; }
 
-# Every scratch file a control writes lives here and is removed on exit.
-TMP=$(mktemp -d -t site-gates)
-trap 'rm -rf "$TMP"' EXIT
+# Every scratch file a control writes lives here and is removed on exit. The
+# directory and the traps are Ferry's pinned shapes (08-CONTEXT.md D-29/D-30 as
+# amended by rulings 17 and 21, 2026-09-15): macOS `mktemp -d -t` IGNORES TMPDIR
+# and lands in /var/folders whatever the caller set, so the parent is spelled out
+# ($D, never /tmp); and each signal trap cleans, disarms itself and re-raises, so
+# a parent sees death-by-signal instead of a plain status.
+D="${TMPDIR:-$(getconf DARWIN_USER_TEMP_DIR)}"
+TMP=$(mktemp -d "$D/site-gates.XXXXXX")
+cleanup() { local st=$?; rm -rf "$TMP"; return "$st"; }
+trap cleanup EXIT
+trap 'cleanup || :; trap - INT; kill -INT $$' INT
+trap 'cleanup || :; trap - TERM; kill -TERM $$' TERM
+trap 'cleanup || :; trap - HUP; kill -HUP $$' HUP
 
 # --- helpers (06-UI-SPEC § 11.1 header, verbatim) ---------------------------
 # strip_html FILE — the source with HTML comments removed (the commented Get
@@ -79,6 +103,12 @@ strip_html() { perl -0777 -pe 's/<!--.*?-->//gs' "$1"; }
 # strip that follows ate it (S-6's control 2 measured 1 where 3 was expected,
 # 2026-09-09). Written this way the value survives and the count is 3.
 page_text() { strip_html "$1" | perl -0777 -pe 's/<script>.*?<\/script>//gs; s/<style>.*?<\/style>//gs; s/content="([^"]*)"([^>]*>)/$2 $1 /g; s/<[^>]+>/ /g'; }
+# raw FILE — the bytes as SERVED, comments and all. Every ABSENCE clause below
+# reads this and never strip_html: a link or a ferry:// href inside an HTML
+# comment is served, is one view-source away, and strip_html (above) drops
+# exactly that — the hole commit A's commented anchor went through (D-15,
+# 08-PATTERNS.md § J2). A gate that says "gone" must read what is sent.
+raw() { cat "$1"; }
 
 # V-2's never list (ui-gates.sh V2_REGEX), applied to the page's visible text
 # and content= values (06-UI-SPEC § 7.2), and the page's voice list (§ 7.1).
@@ -153,48 +183,69 @@ s1() {
 }
 
 # ---------------------------------------------------------------------------
-# S-2 — the two buttons, their labels, hrefs and ORDER; no token; no _blank
-# (§ 5.4, LINK-01). s2_check prints problem lines for a file (no RED prefix) so
-# the control can run the very code on a synthetic page and expect a problem.
+# S-2 — the one button, and the withdrawn link (§ 5.4, LINK-01; D-15,
+# 2026-09-15). INVERTED. Until WIRE ships (Phase 9 restores the link from
+# fe05f53's one-line diff) the public TestFlight join link and its Get Ferry
+# anchor are OFF the served bytes, so what this gate asserts is an ABSENCE —
+# zero testflight.apple.com/join and zero id="get-ferry" in EVERY served copy —
+# next to the one button that stays. All four copies, not index.html alone: S-1
+# says they are identical, and a gate that trusts another gate's clause for its
+# own subject is one refactor away from measuring nothing.
+#
+# ⚠ It reads `raw`, NEVER strip_html. Commit A (P6-D-18) is the measurement:
+# an anchor inside an HTML comment is served, is one view-source away, and was
+# invisible to every gate that strips comments — which is what the header above
+# used to describe as normal. Control 3 plants the link COMMENTED OUT for
+# exactly that reason.
+#
+# s2_check prints problem lines for a file (no RED prefix) so the control can run
+# the very code the verdict runs.
 S2_A='<a[^>]*id="get-testflight"[^>]*href="https://apps\.apple\.com/app/testflight/id899247664"[^>]*>Get TestFlight</a>'
-S2_B='<a[^>]*id="get-ferry"[^>]*href="https://testflight\.apple\.com/join/[A-Za-z0-9]+"[^>]*>Get Ferry</a>'
+S2_JOIN='testflight\.apple\.com/join'
 s2_check() {
-  local s a b n
-  s=$(strip_html "$1")
-  a=$(printf '%s\n' "$s" | command grep -nE "$S2_A" | cut -d: -f1 || true)
-  b=$(printf '%s\n' "$s" | command grep -nE "$S2_B" | cut -d: -f1 || true)
-  n=$(printf '%s\n' "$a" | command grep -c . || true)
-  test "$n" -eq 1 || echo "Get TestFlight anchor (id=get-testflight, App Store id899247664, label 'Get TestFlight', one line) = $n (expected exactly 1)"
-  n=$(printf '%s\n' "$b" | command grep -c . || true)
-  test "$n" -eq 1 || echo "Get Ferry anchor (id=get-ferry, href testflight.apple.com/join/<code>, label 'Get Ferry', one line) = $n (expected exactly 1) — the token TESTFLIGHT_JOIN_URL is still in place, or the anchor is not on one line"
+  local f=$1 s n
+  s=$(raw "$f")
+  n=$(printf '%s\n' "$s" | command grep -cE "$S2_A" || true)
+  test "$n" -eq 1 || echo "$f: Get TestFlight anchor (id=get-testflight, App Store id899247664, label 'Get TestFlight', one line) = $n (expected exactly 1)"
+  n=$(printf '%s\n' "$s" | command grep -cE "$S2_JOIN" || true)
+  test "$n" -eq 0 || echo "$f: $n line(s) carrying a testflight.apple.com/join link (expected 0 — the public link is withdrawn until WIRE ships: D-15, D-16)"
+  n=$(printf '%s\n' "$s" | command grep -cF 'id="get-ferry"' || true)
+  test "$n" -eq 0 || echo "$f: $n 'id=\"get-ferry\"' (expected 0 — the Get Ferry button came off with the link)"
   n=$(printf '%s\n' "$s" | command grep -c 'TESTFLIGHT_JOIN_URL' || true)
-  test "$n" -eq 0 || echo "TESTFLIGHT_JOIN_URL token still present ($n) — P6-D-16's public link has not been written in"
-  # Both line numbers guarded: an empty $b (commit A's commented anchor) prints
-  # the stated sentence with an empty number instead of a bash integer error.
-  { [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ]; } 2>/dev/null \
-    || echo "Get TestFlight (line $a) does not precede Get Ferry (line $b) — LINK-01's order"
+  test "$n" -eq 0 || echo "$f: TESTFLIGHT_JOIN_URL token present ($n) — neither the token nor the link belongs on the page"
   n=$(printf '%s\n' "$s" | command grep -c 'target="_blank"' || true)
-  test "$n" -eq 0 || echo "$n target=_blank — the buttons open in the same tab"
+  test "$n" -eq 0 || echo "$f: $n target=_blank — the button opens in the same tab"
   return 0
 }
 s2() {
-  local rc=0 n out line
-  # Control 1: the b pattern matches its expected line.
-  n=$(printf '%s\n' '<a id="get-ferry" class="button prominent" href="https://testflight.apple.com/join/abc123">Get Ferry</a>' | command grep -cE "$S2_B" || true)
-  test "$n" -eq 1 || { red "control: the Get Ferry pattern did not match its own expected line ($n)"; return 1; }
-  # Control 2: a synthetic page with the two anchors swapped must red the order check.
+  local rc=0 n out line f
+  # Control 1: the Get TestFlight pattern matches its own expected line.
+  n=$(printf '%s\n' '<a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>' | command grep -cE "$S2_A" || true)
+  test "$n" -eq 1 || { red "control: the Get TestFlight pattern did not match its own expected line ($n)"; return 1; }
+  # Control 2: a clean synthetic page prints nothing.
   printf '%s\n' '<main>' \
-    '<a id="get-ferry" class="button prominent" href="https://testflight.apple.com/join/abc123">Get Ferry</a>' \
     '<a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>' \
-    '</main>' > "$TMP/swapped.html"
-  out=$(s2_check "$TMP/swapped.html")
-  printf '%s\n' "$out" | command grep -q 'does not precede' \
-    || { red "control: the order check did not notice swapped anchors (got: '$(echo $out)')"; return 1; }
-  echo "    control ok (the Get Ferry pattern matches its line; swapped anchors red: $(printf '%s\n' "$out" | command grep 'does not precede'))"
-  out=$(s2_check index.html)
-  if [ -n "$out" ]; then while IFS= read -r line; do red "$line"; done <<< "$out"; rc=1; fi
+    '</main>' > "$TMP/s2-clean.html"
+  out=$(s2_check "$TMP/s2-clean.html")
+  [ -z "$out" ] || { red "control: the clean synthetic page printed a problem: $(echo $out)"; return 1; }
+  # Control 3: the same page with a join-shaped href planted INSIDE AN HTML
+  # COMMENT must print both the join line and the get-ferry line — the shape
+  # strip_html dropped, seen here because s2_check reads raw bytes.
+  cp "$TMP/s2-clean.html" "$TMP/s2-planted.html"
+  printf '%s\n' '<!-- <a id="get-ferry" class="button prominent" href="https://testflight.apple.com/join/W6gEGfAC">Get Ferry</a> -->' >> "$TMP/s2-planted.html"
+  out=$(s2_check "$TMP/s2-planted.html")
+  printf '%s\n' "$out" | command grep -qF 'testflight.apple.com/join' \
+    || { red "control: a planted join-shaped href inside an HTML comment was not seen (got: '$(echo $out)')"; return 1; }
+  printf '%s\n' "$out" | command grep -qF 'get-ferry' \
+    || { red "control: a planted id=get-ferry inside an HTML comment was not seen (got: '$(echo $out)')"; return 1; }
+  echo "    control ok (the Get TestFlight pattern matches its line; a clean page prints nothing; a COMMENTED-OUT join link still prints)"
+  for f in index.html 404.html i/index.html o/index.html; do
+    test -f "$f" || { red "no $f — S-2 names its files, and a missing one is a red, never a skip"; rc=1; continue; }
+    out=$(s2_check "$f")
+    if [ -n "$out" ]; then while IFS= read -r line; do red "$line"; done <<< "$out"; rc=1; fi
+  done
   test "$rc" -eq 0 || return 1
-  echo "S-2 GREEN (Get TestFlight then Get Ferry, both hrefs real, no token, no _blank)"
+  echo "S-2 GREEN (four served copies, raw bytes: the Get TestFlight button once; zero testflight.apple.com/join, zero id=\"get-ferry\", no token, no _blank)"
 }
 
 # ---------------------------------------------------------------------------
@@ -242,65 +293,84 @@ s3() {
 }
 
 # ---------------------------------------------------------------------------
-# S-4 — the fallback exists once, lives in the invite-only set, and the invite
-# set is switched by the path prefix (§ 5.1, § 5.5).
+# S-4 — the fragment fallback is GONE, and what is left of the invite-only set
+# (§ 5.1, § 5.5; D-14, 2026-09-15). INVERTED: the anchor, the hash read and the
+# href write came off all four copies, so the two counts this gate used to hold
+# at one and two are now zero, and the absence clauses read `raw` — a
+# commented-out ferry:// href is still served. What survives unchanged: the
+# invite-only display rules (now #invite and #again), the path switch that turns
+# them on under /i/ (D-14 keeps line 67), and the refusal of visibility/opacity
+# hiding.
 S4_ANCHOR='<a[^>]*id="open-ferry"[^>]*href="ferry://i"[^>]*>Already have Ferry\? Open it</a>'
-S4_NONE='#invite, #again, #open-ferry \{ display: none; \}'
-S4_BLOCK='body\.is-invite #invite, body\.is-invite #again, body\.is-invite #open-ferry \{ display: block; \}'
+S4_NONE='#invite, #again \{ display: none; \}'
+S4_BLOCK='body\.is-invite #invite, body\.is-invite #again \{ display: block; \}'
 s4() {
-  local rc=0 s n
-  # Controls: each pattern over its expected line = 1; the none-rule with
-  # #open-ferry deleted must NOT match (the net sees the fallback leaving the set).
+  local rc=0 s r n
+  # Controls: the net still recognises the fallback it now forbids (the anchor
+  # shape, and a ferry:// href on a $TMP copy); both rule patterns match their
+  # expected lines; and a rule that still carries #open-ferry counts 0 — the net
+  # sees the fallback coming BACK into the invite-only set.
   n=$(printf '%s\n' '<a id="open-ferry" class="button secondary" href="ferry://i">Already have Ferry? Open it</a>' | command grep -cE "$S4_ANCHOR" || true)
-  test "$n" -eq 1 || { red "control: the fallback anchor pattern did not match its own line ($n)"; return 1; }
-  n=$(printf '%s\n' '    #invite, #again, #open-ferry { display: none; }' | command grep -cE "$S4_NONE" || true)
+  test "$n" -eq 1 || { red "control: the fallback anchor pattern did not match the line it forbids ($n)"; return 1; }
+  printf '%s\n' '<main>' "    if (open && location.hash) { open.href = 'ferry://i' + location.hash; }" '</main>' > "$TMP/s4-fallback-back.html"
+  n=$(command grep -c 'ferry://' "$TMP/s4-fallback-back.html" || true)
+  test "$n" -eq 1 || { red "control: a re-added ferry:// href was not counted on a \$TMP copy ($n) — the zero clause below could not red"; return 1; }
+  n=$(printf '%s\n' '    #invite, #again { display: none; }' | command grep -cE "$S4_NONE" || true)
   test "$n" -eq 1 || { red "control: the invite-only rule pattern did not match its own line ($n)"; return 1; }
-  n=$(printf '%s\n' '    body.is-invite #invite, body.is-invite #again, body.is-invite #open-ferry { display: block; }' | command grep -cE "$S4_BLOCK" || true)
+  n=$(printf '%s\n' '    body.is-invite #invite, body.is-invite #again { display: block; }' | command grep -cE "$S4_BLOCK" || true)
   test "$n" -eq 1 || { red "control: the invite rule pattern did not match its own line ($n)"; return 1; }
-  printf '%s\n' '    #invite, #again { display: none; }' > "$TMP/left-the-set.css"
-  n=$(command grep -cE "$S4_NONE" "$TMP/left-the-set.css" || true)
-  test "$n" -eq 0 || { red "control: the invite-only net did not notice the fallback leaving the set ($n)"; return 1; }
-  echo "    control ok (three patterns match their lines; a rule without #open-ferry counts 0)"
+  printf '%s\n' '    #invite, #again, #open-ferry { display: none; }' > "$TMP/s4-in-the-set.css"
+  n=$(command grep -cE "$S4_NONE" "$TMP/s4-in-the-set.css" || true)
+  test "$n" -eq 0 || { red "control: the invite-only net did not notice #open-ferry back in the set ($n)"; return 1; }
+  echo "    control ok (the forbidden anchor and a re-added ferry:// href are both seen on \$TMP copies; both rule patterns match their lines; a rule carrying #open-ferry counts 0)"
   s=$(strip_html index.html)
-  n=$(printf '%s\n' "$s" | command grep -cE "$S4_ANCHOR" || true)
-  test "$n" -eq 1 || { red "Already have Ferry? Open it anchor (id=open-ferry, href=ferry://i, one line) = $n (expected exactly 1)"; rc=1; }
-  n=$(printf '%s\n' "$s" | command grep -c 'ferry://' || true)
-  test "$n" -eq 2 || { red "ferry:// sites = $n (expected exactly 2: the anchor's href and the script's 'ferry://i' + location.hash)"; rc=1; }
+  r=$(raw index.html)
+  n=$(printf '%s\n' "$r" | command grep -c 'ferry://' || true)
+  test "$n" -eq 0 || { red "ferry:// sites = $n in the raw bytes (expected 0 — the fallback anchor, the hash read and the href write all came off: D-14)"; rc=1; }
+  n=$(printf '%s\n' "$r" | command grep -cE "$S4_ANCHOR" || true)
+  test "$n" -eq 0 || { red "'Already have Ferry? Open it' anchor (id=open-ferry, href=ferry://i) = $n in the raw bytes (expected 0)"; rc=1; }
+  n=$(printf '%s\n' "$r" | command grep -cF 'id="open-ferry"' || true)
+  test "$n" -eq 0 || { red "$n 'id=\"open-ferry\"' in the raw bytes (expected 0 — the id goes with the anchor and its CSS)"; rc=1; }
   n=$(printf '%s\n' "$s" | command grep -cE "$S4_NONE" || true)
-  test "$n" -eq 1 || { red "the invite-only rule '#invite, #again, #open-ferry { display: none; }' = $n (expected exactly 1, written exactly so)"; rc=1; }
+  test "$n" -eq 1 || { red "the invite-only rule '#invite, #again { display: none; }' = $n (expected exactly 1, written exactly so — #open-ferry is out of the set)"; rc=1; }
   n=$(printf '%s\n' "$s" | command grep -cE "$S4_BLOCK" || true)
-  test "$n" -eq 1 || { red "the invite rule 'body.is-invite … { display: block; }' = $n (expected exactly 1)"; rc=1; }
+  test "$n" -eq 1 || { red "the invite rule 'body.is-invite #invite, body.is-invite #again { display: block; }' = $n (expected exactly 1)"; rc=1; }
   n=$(printf '%s\n' "$s" | command grep -cF "location.pathname.indexOf('/i/') === 0" || true)
-  test "$n" -eq 1 || { red "the path switch location.pathname.indexOf('/i/') === 0 = $n (expected exactly 1)"; rc=1; }
+  test "$n" -eq 1 || { red "the path switch location.pathname.indexOf('/i/') === 0 = $n (expected exactly 1 — the invite card and the re-tap line still switch on /i/)"; rc=1; }
   n=$(printf '%s\n' "$s" | command grep -cE 'visibility: *hidden|opacity: *0' || true)
   test "$n" -eq 0 || { red "$n visibility:hidden/opacity:0 — hidden things are display:none (out of the accessibility tree)"; rc=1; }
   test "$rc" -eq 0 || return 1
-  echo "S-4 GREEN (the fallback once, in the invite-only set, switched by the path prefix)"
+  echo "S-4 GREEN (no ferry:// and no fallback anchor in the raw bytes; the invite-only set is #invite and #again, switched by the path prefix; nothing hidden by visibility or opacity)"
 }
 
 # ---------------------------------------------------------------------------
-# S-5 — the fragment never leaves, and nothing else does (§ 5.8): zero request
-# patterns; one inline script; location.hash exactly once, on the re-attachment
-# line; nothing decodes, splits, inspects or logs; the no-referrer meta.
+# S-5 — the fragment never leaves, because the page never reads it (§ 5.8;
+# D-14, 2026-09-15). INVERTED: location.hash is now expected ZERO times, in the
+# RAW bytes — the fallback that read it came off the page, and a commented-out
+# read would still be served. Unchanged, and the reason this gate keeps its
+# name: zero request patterns, one inline script, nothing that decodes, splits,
+# inspects or logs, and the no-referrer meta.
 s5() {
-  local rc=0 s n pat fn
+  local rc=0 s r n pat fn
   # Controls: the shapes the gate exists to refuse are seen.
   n=$(printf '%s\n' 'x=fetch("a")' | command grep -cF 'fetch(' || true)
   test "$n" -eq 1 || { red "control: 'fetch(' not seen in x=fetch(\"a\") ($n)"; return 1; }
   n=$(printf '%s\n' "open.href = 'ferry://i' + decodeURIComponent(location.hash)" | command grep -cF 'decodeURIComponent' || true)
   test "$n" -eq 1 || { red "control: decodeURIComponent not seen on the decoding line ($n)"; return 1; }
-  echo "    control ok (fetch( and decodeURIComponent(location.hash) are each seen once)"
+  printf '%s\n' "    if (open && location.hash) { open.href = 'ferry://i' + location.hash; }" > "$TMP/s5-hash-back.js"
+  n=$(command grep -c 'location.hash' "$TMP/s5-hash-back.js" || true)
+  test "$n" -eq 1 || { red "control: a re-added hash read was not counted on a \$TMP copy ($n) — the zero clause below could not red"; return 1; }
+  echo "    control ok (fetch( and decodeURIComponent(location.hash) are each seen once; a re-added hash read counts 1 on a \$TMP copy)"
   s=$(strip_html index.html)
+  r=$(raw index.html)
   for pat in "${REQUEST_PATTERNS[@]}"; do
     n=$(printf '%s\n' "$s" | command grep -cF "$pat" || true)
     test "$n" -eq 0 || { red "$n '$pat' — the page makes no request and reads nothing but its path and hash"; rc=1; }
   done
   n=$(printf '%s\n' "$s" | command grep -c '<script' || true)
   test "$n" -eq 1 || { red "script blocks = $n (expected exactly 1, inline)"; rc=1; }
-  n=$(printf '%s\n' "$s" | command grep -c 'location.hash' || true)
-  test "$n" -eq 1 || { red "location.hash sites = $n (expected exactly 1: the fallback's re-attachment)"; rc=1; }
-  n=$(printf '%s\n' "$s" | command grep -cF "open.href = 'ferry://i' + location.hash" || true)
-  test "$n" -eq 1 || { red "the re-attachment line \"open.href = 'ferry://i' + location.hash\" = $n (expected exactly 1, written exactly so — the hash is appended whole, never decoded or split)"; rc=1; }
+  n=$(printf '%s\n' "$r" | command grep -c 'location.hash' || true)
+  test "$n" -eq 0 || { red "location.hash sites = $n in the raw bytes (expected 0 — the page does not read the fragment at all: D-14; a commented-out read is still served)"; rc=1; }
   for fn in decodeURIComponent 'split(' 'substring(' 'slice(' 'replace(' 'match(' 'console.'; do
     n=$(printf '%s\n' "$s" | command grep -cF "$fn" || true)
     test "$n" -eq 0 || { red "$n '$fn' in the page — nothing parses, inspects or logs the fragment"; rc=1; }
@@ -308,7 +378,7 @@ s5() {
   n=$(printf '%s\n' "$s" | command grep -cF '<meta name="referrer" content="no-referrer">' || true)
   test "$n" -eq 1 || { red "referrer no-referrer meta = $n (expected 1)"; rc=1; }
   test "$rc" -eq 0 || return 1
-  echo "S-5 GREEN (zero requests; one inline script; location.hash once, appended whole; no-referrer)"
+  echo "S-5 GREEN (zero requests; one inline script; location.hash zero times in the raw bytes; nothing parses or logs; no-referrer)"
 }
 
 # ---------------------------------------------------------------------------
@@ -333,7 +403,7 @@ s6() {
   test "$n" -eq 2 || { red "control: deleting #what left the count at $n (expected 2 — the exactly-3 check could not red)"; return 1; }
   echo "    control ok (never list sees 'the relay path'; the sentence counts 3, then 2 with #what deleted)"
   t=$(page_text index.html)
-  for str in "$THE_SENTENCE" 'Someone invited you to share with them on Ferry.' 'Ferry is in private testing. It comes through Apple'"'"'s TestFlight app, so getting it takes two steps.' 'Then go back to the message and tap the invite link again. That'"'"'s what pairs you.' 'Made by'; do
+  for str in "$THE_SENTENCE" 'Someone invited you to share with them on Ferry.' 'Ferry is in private testing and comes through Apple'"'"'s TestFlight app, so ask the person who invited you to add you to the test.' 'Then go back to the message and tap the invite link again. That'"'"'s what pairs you.' 'Made by'; do
     n=$(printf '%s\n' "$t" | command grep -cF "$str" || true)
     test "$n" -ge 1 || { red "sentence missing from the page: \"$str\""; rc=1; }
   done
@@ -505,12 +575,79 @@ s10() {
 }
 
 # ---------------------------------------------------------------------------
+# S-14 — the fallback and the link STAY gone (D-17, 2026-09-15; cdn-gates.sh
+# owns S-11..S-13, so the next free number here is 14). S-2, S-4 and S-5 each
+# assert an absence inside the gate that owns that part of the page, in the
+# shapes those parts have today. S-14 is the one gate that says it plainly and
+# without shape: five strings, counted in the RAW bytes of every served copy. A
+# change that slips past a shape pattern — different quoting, an anchor split
+# over two lines, a link inside an HTML comment, a hash read moved into an
+# attribute — still reds here. cdn-gates.sh asks the same question of the
+# served host (D-17), which is the half this one cannot reach.
+#
+# ⚠ SELF-MATCH HAZARD (D-17). This script carries all five strings itself — in
+# the header table, in S2_JOIN, in S4_ANCHOR, in the controls and in this very
+# comment. S-14 reads the four HTML files BY NAME: never a glob, never `scripts/`,
+# never itself. A glob here would red on site-gates.sh for ever, and the cheapest
+# way out of that red is to weaken the gate, which is how an absence gate dies.
+#
+# What it does NOT cover, stated so nobody has to discover it: privacy/index.html
+# (S-10's subject, which carries none of the five today and is not in this list
+# because D-17 names the four served copies), and anything served from a path
+# that is not one of these files — the live half, which cdn-gates.sh owns.
+S14_FILES=(index.html 404.html i/index.html o/index.html)
+S14_STRINGS=('location.hash' 'ferry://' 'testflight.apple.com/join' 'id="get-ferry"' 'id="open-ferry"')
+# s14_check FILE — one problem line per forbidden string present in FILE's raw
+# bytes; no RED prefix, so the controls run the very code the verdict runs.
+s14_check() {
+  local f=$1 str n
+  for str in "${S14_STRINGS[@]}"; do
+    n=$(command grep -cF "$str" "$f" || true)
+    test "$n" -eq 0 || echo "$f: $n line(s) carrying '$str' (expected 0 — D-14/D-15: the fragment fallback and the public join link are off the served bytes until WIRE ships)"
+  done
+  return 0
+}
+s14() {
+  local rc=0 f str out line n
+  # Control 1: each forbidden string, planted ALONE into a $TMP copy and inside
+  # an HTML comment, must print its own problem line — five plants, five reds.
+  for str in "${S14_STRINGS[@]}"; do
+    printf '%s\n' '<main>ok</main>' "  <!-- planted: $str -->" > "$TMP/s14-plant.html"
+    out=$(s14_check "$TMP/s14-plant.html")
+    n=$(printf '%s\n' "$out" | command grep -cF "$str" || true)
+    test "$n" -ge 1 || { red "control: the planted string '$str' was not seen on a \$TMP copy (got: '$(echo $out)')"; return 1; }
+  done
+  # Control 2: a copy carrying none of them prints nothing.
+  printf '%s\n' '<main>ok</main>' > "$TMP/s14-clean.html"
+  out=$(s14_check "$TMP/s14-clean.html")
+  [ -z "$out" ] || { red "control: a clean \$TMP copy printed a problem: $(echo $out)"; return 1; }
+  echo "    control ok (each of the five strings planted alone inside an HTML comment reds; a clean copy prints nothing)"
+  for f in "${S14_FILES[@]}"; do
+    test -f "$f" || { red "no $f — S-14 names its files, and a missing one is a red, never a skip"; rc=1; continue; }
+    out=$(s14_check "$f")
+    if [ -n "$out" ]; then while IFS= read -r line; do red "$line"; done <<< "$out"; rc=1; fi
+  done
+  test "$rc" -eq 0 || return 1
+  echo "S-14 GREEN (${#S14_FILES[@]} served copies x ${#S14_STRINGS[@]} strings in raw bytes: location.hash, ferry://, testflight.apple.com/join, id=\"get-ferry\", id=\"open-ferry\" — none present)"
+}
+
+# ---------------------------------------------------------------------------
 # The runner (ui-gates.sh's): FERRY_SITE_GATES selects by name; a name that is
 # not a function is RED, not skipped — a typo must not print ok.
-GATES="${FERRY_SITE_GATES:-s1 s2 s3 s4 s5 s6 s7 s8 s9 s10}"
+#
+# A bare `|| true` on the dispatch line stood here until 2026-09-15 (ME-04,
+# 08-PATTERNS.md § J5 — written out there, not here, because a gate that greps
+# this script for the old shape must not find it in a comment about the fix): a
+# gate that DIED before printing its red — a bad substitution, a missing file under
+# set -e, a control that returned non-zero on its own — left FAILED at 0 and the
+# run printed ok. Every red this script has ever printed came from red(); nothing
+# read the status. ui-gates.sh fixed this shape; the site gates get it in the
+# same commit as S-14, because a NEW absence gate is exactly the kind that can
+# die early and would have been believed.
+GATES="${FERRY_SITE_GATES:-s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s14}"
 for g in $GATES; do
   declare -F "$g" >/dev/null || { echo "RED: no gate named $g"; FAILED=1; continue; }
-  "$g" || true
+  "$g" || { FAILED=1; echo "RED: gate $g exited non-zero"; }
 done
 if [ "$FAILED" -ne 0 ]; then
   echo "==> site-gates: FAILED" >&2
