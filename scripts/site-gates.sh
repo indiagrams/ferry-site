@@ -64,14 +64,17 @@
 #         <style> block byte-identical to index.html's;
 #         14 hex literals; one <a href="/">; no-referrer;
 #         and index.html's footer links /privacy once
-#   S-14  the fallback and the link STAY gone (D-17;    RED: <f>: N line(s) carrying '<string>'
-#         cdn-gates.sh owns S-11..S-13): five strings     (expected 0 — …)
-#         — location.hash, ferry://,                    RED: no <f> — S-14 names its files …
-#         testflight.apple.com/join, id="get-ferry",
-#         id="open-ferry" — counted in the RAW bytes of
-#         the four served copies, named one by one (this
-#         script carries all five itself: a glob would
-#         self-match, D-17)
+#   S-14  the fallback and the link STAY gone (D-17,     RED: the served set has a page S-14 does
+#         widened by ruling 38). The HTML set is           not cover: <path> …
+#         DISCOVERED (git ls-files '*.html') and must     RED: <f>: N line(s) carrying '<string>'
+#         equal S14_FILES — five pages, the four served   (expected 0 — …)
+#         copies plus the privacy page. In each: the five RED: <f>: N line(s) carrying the host
+#         strings above, zero; the TestFlight host, zero,  '<host>' case-insensitively …
+#         CASE-INSENSITIVELY. And in each served copy the RED: <f>: the Get TestFlight button's
+#         Get TestFlight button's own host exactly once,   host … = N (expected exactly 1) …
+#         so no absence clause is satisfiable by deleting
+#         the page (this script carries every forbidden
+#         string itself: it reads *.html, never .sh, D-17)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -403,7 +406,7 @@ s6() {
   test "$n" -eq 2 || { red "control: deleting #what left the count at $n (expected 2 — the exactly-3 check could not red)"; return 1; }
   echo "    control ok (never list sees 'the relay path'; the sentence counts 3, then 2 with #what deleted)"
   t=$(page_text index.html)
-  for str in "$THE_SENTENCE" 'Someone invited you to share with them on Ferry.' 'Ferry is in private testing and comes through Apple'"'"'s TestFlight app, so ask the person who invited you to add you to the test.' 'Then go back to the message and tap the invite link again. That'"'"'s what pairs you.' 'Made by'; do
+  for str in "$THE_SENTENCE" 'Someone invited you to share with them on Ferry.' 'Ferry is in private testing through Apple'"'"'s TestFlight app, and the person who sent you this link can ask for you to be added.' 'Then go back to the message and tap the invite link again. That'"'"'s what pairs you.' 'Made by'; do
     n=$(printf '%s\n' "$t" | command grep -cF "$str" || true)
     test "$n" -ge 1 || { red "sentence missing from the page: \"$str\""; rc=1; }
   done
@@ -575,40 +578,64 @@ s10() {
 }
 
 # ---------------------------------------------------------------------------
-# S-14 — the fallback and the link STAY gone (D-17, 2026-09-15; cdn-gates.sh
-# owns S-11..S-13, so the next free number here is 14). S-2, S-4 and S-5 each
-# assert an absence inside the gate that owns that part of the page, in the
-# shapes those parts have today. S-14 is the one gate that says it plainly and
-# without shape: five strings, counted in the RAW bytes of every served copy. A
-# change that slips past a shape pattern — different quoting, an anchor split
-# over two lines, a link inside an HTML comment, a hash read moved into an
-# attribute — still reds here. cdn-gates.sh asks the same question of the
-# served host (D-17), which is the half this one cannot reach.
+# S-14 — the fallback and the link STAY gone (D-17, 2026-09-15; widened the
+# same day by ruling 38, after three measured defeaters). cdn-gates.sh owns
+# S-11..S-13, so the next free number here is 14.
 #
-# ⚠ SELF-MATCH HAZARD (D-17). This script carries all five strings itself — in
-# the header table, in S2_JOIN, in S4_ANCHOR, in the controls and in this very
-# comment. S-14 reads the four HTML files BY NAME: never a glob, never `scripts/`,
-# never itself. A glob here would red on site-gates.sh for ever, and the cheapest
-# way out of that red is to weaken the gate, which is how an absence gate dies.
+# S-2, S-4 and S-5 each assert an absence inside the gate that owns that part of
+# the page, in the shapes those parts have today. S-14 says it plainly and
+# without shape, over the RAW bytes, and it now answers the three questions the
+# first version could not:
 #
-# What it does NOT cover, stated so nobody has to discover it: privacy/index.html
-# (S-10's subject, which carries none of the five today and is not in this list
-# because D-17 names the four served copies), and anything served from a path
-# that is not one of these files — the live half, which cdn-gates.sh owns.
-S14_FILES=(index.html 404.html i/index.html o/index.html)
+#   (a) WHICH FILES. The set is DISCOVERED, never enumerated: the HTML files git
+#       tracks must equal S14_FILES exactly, and a page that is served without
+#       being in this list reds and names itself. Measured 2026-09-15: a new page
+#       carrying the withdrawn link left all eleven gates green, because every
+#       gate named its own files. `git ls-files` is the honest source HERE
+#       because GitHub Pages serves the pushed git tree — a tracked file is
+#       served, an untracked working-tree file is not, which is exactly what
+#       ls-files says and exactly what a find over the working tree would get
+#       wrong. Both agreed when this was written; they part company the moment
+#       someone leaves an uncommitted page lying about. If this site ever grows a
+#       build step, or the CDN is fed from somewhere other than this tree, this
+#       clause must follow the publish root and say so.
+#   (b) WHICH STRINGS. The five exact byte-strings, and the TestFlight HOST
+#       matched CASE-INSENSITIVELY. Measured 2026-09-15: a mixed-case host under
+#       an id other than the old one, and Apple's other public-invite URL form,
+#       each served a working public link past every clause. D-17 means "no join
+#       link is served", not "these byte-strings are absent".
+#   (c) WHETHER THE PAGE STILL HAS ITS BUTTON. An absence clause that can be
+#       satisfied by deleting the page is not a gate. The Get TestFlight button
+#       points at the App Store, a different host from the forbidden one and no
+#       substring of it, so every served copy must still carry it exactly once.
+#
+# ⚠ SELF-MATCH HAZARD (D-17). This script carries every forbidden string itself.
+# S-14 reads HTML only — the discovery pattern is '*.html' and this file is .sh —
+# never a tree-wide glob, never itself. A gate that reds on its own source gets
+# weakened rather than fixed, which is how an absence gate dies.
+S14_FILES=(404.html i/index.html index.html o/index.html privacy/index.html)   # sorted
+S14_SERVED=(index.html 404.html i/index.html o/index.html)                     # the four copies
 S14_STRINGS=('location.hash' 'ferry://' 'testflight.apple.com/join' 'id="get-ferry"' 'id="open-ferry"')
+S14_HOST='testflight.apple.com'          # matched -iF: the host, whatever the path or the case
+S14_BUTTON_HOST='apps.apple.com'         # the Get TestFlight button's host, which must STAY
+# s14_discover — the HTML files that will be served, sorted. Tracked, because
+# what is pushed is what Pages serves.
+s14_discover() { git ls-files '*.html' | sort; }
 # s14_check FILE — one problem line per forbidden string present in FILE's raw
-# bytes; no RED prefix, so the controls run the very code the verdict runs.
+# bytes, plus one for the host in any case; no RED prefix, so the controls run
+# the very code the verdict runs.
 s14_check() {
   local f=$1 str n
   for str in "${S14_STRINGS[@]}"; do
     n=$(command grep -cF "$str" "$f" || true)
     test "$n" -eq 0 || echo "$f: $n line(s) carrying '$str' (expected 0 — D-14/D-15: the fragment fallback and the public join link are off the served bytes until WIRE ships)"
   done
+  n=$(command grep -icF "$S14_HOST" "$f" || true)
+  test "$n" -eq 0 || echo "$f: $n line(s) carrying the host '$S14_HOST' case-insensitively (expected 0 — D-17 as widened by ruling 38: no join link is served, in any spelling, on any path, under any id; the Get TestFlight button's host is a different one and does not match this)"
   return 0
 }
 s14() {
-  local rc=0 f str out line n
+  local rc=0 f str out line n want got extra missing a b
   # Control 1: each forbidden string, planted ALONE into a $TMP copy and inside
   # an HTML comment, must print its own problem line — five plants, five reds.
   for str in "${S14_STRINGS[@]}"; do
@@ -617,18 +644,80 @@ s14() {
     n=$(printf '%s\n' "$out" | command grep -cF "$str" || true)
     test "$n" -ge 1 || { red "control: the planted string '$str' was not seen on a \$TMP copy (got: '$(echo $out)')"; return 1; }
   done
-  # Control 2: a copy carrying none of them prints nothing.
+  # Control 2: the host in a case NO exact string in the list would match, and
+  # on a path that is not the old one, must still print — twice over, since both
+  # defeaters were real.
+  printf '%s\n' '<main>ok</main>' '  <a id="join-ferry" href="https://TestFlight.Apple.com/JOIN/x">Get Ferry</a>' > "$TMP/s14-case.html"
+  out=$(s14_check "$TMP/s14-case.html")
+  printf '%s\n' "$out" | command grep -qF "case-insensitively" \
+    || { red "control: a mixed-case host was not seen on a \$TMP copy (got: '$(echo $out)')"; return 1; }
+  printf '%s\n' '<main>ok</main>' '  <a id="join-ferry" href="https://testflight.apple.com/v1/invite/abc?ct=x">Get Ferry</a>' > "$TMP/s14-otherform.html"
+  out=$(s14_check "$TMP/s14-otherform.html")
+  printf '%s\n' "$out" | command grep -qF "case-insensitively" \
+    || { red "control: the other public-invite URL form was not seen on a \$TMP copy (got: '$(echo $out)')"; return 1; }
+  # Control 3: a SYNTHETIC page in the fifth file's shape (no button, no script,
+  # the privacy page's) is silent, and a join link planted into it inside an HTML
+  # comment prints. The real privacy/index.html is the VERDICT's subject and
+  # never a control's baseline: a control that reds because its subject is dirty
+  # reports a broken harness when the harness is fine. What guarantees the fifth
+  # file is actually covered is clause (a) — drop it from S14_FILES and the
+  # discovered set no longer matches, naming it.
+  printf '%s\n' '<!doctype html><html lang="en"><body><main>' \
+    '<h1>Privacy</h1>' \
+    '<p>Ferry has no account and no server of its own.</p>' \
+    '</main></body></html>' > "$TMP/s14-privacy-shape.html"
+  out=$(s14_check "$TMP/s14-privacy-shape.html")
+  [ -z "$out" ] || { red "control: a synthetic page in the privacy page's shape printed a problem: $(echo $out)"; return 1; }
+  printf '%s\n' "  <!-- <a id=\"get-ferry\" href=\"https://testflight.apple.com/join/x\">Get Ferry</a> -->" >> "$TMP/s14-privacy-shape.html"
+  out=$(s14_check "$TMP/s14-privacy-shape.html")
+  printf '%s\n' "$out" | command grep -qF 'get-ferry' \
+    || { red "control: a join link planted into the privacy-shaped page was not seen (got: '$(echo $out)')"; return 1; }
+  # Control 4: a copy carrying none of them prints nothing.
   printf '%s\n' '<main>ok</main>' > "$TMP/s14-clean.html"
   out=$(s14_check "$TMP/s14-clean.html")
   [ -z "$out" ] || { red "control: a clean \$TMP copy printed a problem: $(echo $out)"; return 1; }
-  echo "    control ok (each of the five strings planted alone inside an HTML comment reds; a clean copy prints nothing)"
+  # Control 5: the set comparison notices an extra page and a missing one.
+  a=$(printf '%s\n' 404.html index.html | sort)
+  b=$(printf '%s\n' 404.html index.html join/index.html | sort)
+  out=$(comm -13 <(printf '%s\n' "$a") <(printf '%s\n' "$b"))
+  test "$out" = "join/index.html" || { red "control: the set comparison did not name an extra page (got: '$(echo $out)')"; return 1; }
+  out=$(comm -23 <(printf '%s\n' "$b") <(printf '%s\n' "$a"))
+  test "$out" = "join/index.html" || { red "control: the set comparison did not name a missing page (got: '$(echo $out)')"; return 1; }
+  # Control 6: the button clause can red — a copy with the anchor deleted counts 0.
+  command grep -v 'id="get-testflight"' index.html > "$TMP/s14-nobutton.html"
+  n=$(command grep -cF "$S14_BUTTON_HOST" "$TMP/s14-nobutton.html" || true)
+  test "$n" -eq 0 || { red "control: deleting the Get TestFlight anchor left its host findable ($n) — the button clause could not red"; return 1; }
+  echo "    control ok (each of the five strings planted alone reds; a mixed-case host and the other invite form both red; a privacy-shaped page is silent and a plant into it reds; the set comparison names an extra and a missing page; deleting the button leaves its host at 0)"
+  # (a) the served set is DISCOVERED and must equal the list.
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || { red "the served set cannot be discovered here: $(pwd) is not a git checkout, and GitHub Pages serves the pushed tree — a gate that cannot discover its subject has measured nothing and must never read as a pass"; return 1; }
+  want=$(printf '%s\n' "${S14_FILES[@]}" | sort)
+  got=$(s14_discover)
+  if [ "$want" != "$got" ]; then
+    extra=$(comm -13 <(printf '%s\n' "$want") <(printf '%s\n' "$got"))
+    missing=$(comm -23 <(printf '%s\n' "$want") <(printf '%s\n' "$got"))
+    if [ -n "$extra" ]; then
+      while IFS= read -r line; do red "the served set has a page S-14 does not cover: $line — it will be served and no clause reads it; add it to S14_FILES (ruling 38: the set is discovered, not enumerated)"; done <<< "$extra"
+    fi
+    if [ -n "$missing" ]; then
+      while IFS= read -r line; do red "S14_FILES names $line, which git does not track — the list and the served set must be the same set"; done <<< "$missing"
+    fi
+    rc=1
+  fi
+  # (b) the strings and the host, per file.
   for f in "${S14_FILES[@]}"; do
     test -f "$f" || { red "no $f — S-14 names its files, and a missing one is a red, never a skip"; rc=1; continue; }
     out=$(s14_check "$f")
     if [ -n "$out" ]; then while IFS= read -r line; do red "$line"; done <<< "$out"; rc=1; fi
   done
+  # (c) the button is still there, so (b) cannot be satisfied by deleting it.
+  for f in "${S14_SERVED[@]}"; do
+    test -f "$f" || continue
+    n=$(command grep -cF "$S14_BUTTON_HOST" "$f" || true)
+    test "$n" -eq 1 || { red "$f: the Get TestFlight button's host '$S14_BUTTON_HOST' = $n (expected exactly 1) — the absence clauses above must not be satisfiable by deleting the button as well as the link"; rc=1; }
+  done
   test "$rc" -eq 0 || return 1
-  echo "S-14 GREEN (${#S14_FILES[@]} served copies x ${#S14_STRINGS[@]} strings in raw bytes: location.hash, ferry://, testflight.apple.com/join, id=\"get-ferry\", id=\"open-ferry\" — none present)"
+  echo "S-14 GREEN (${#S14_FILES[@]} HTML files discovered by git ls-files and equal to the list: $(printf '%s ' "${S14_FILES[@]}")| ${#S14_STRINGS[@]} strings and the host case-insensitively = 0 in each; the Get TestFlight host once in each of the ${#S14_SERVED[@]} served copies)"
 }
 
 # ---------------------------------------------------------------------------
