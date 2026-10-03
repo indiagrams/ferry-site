@@ -58,7 +58,7 @@
 #   S-9   the tile is render-icon.swift's drawing: the   RED: tile: '<pattern>' = N
 #         seven literals once each; no gradient/opacity/ RED: tile: N 'linearGradient' …
 #         img; one svg
-#   S-10  privacy/index.html (P6-D-20): the four         RED: no privacy/index.html (…)
+#   S-10  privacy/index.html (P6-D-20): the three        RED: no privacy/index.html (…)
 #         sentences; never list + voice list = 0; no     RED: privacy sentence missing: "…"
 #         script; S-5's request patterns 0; lang=en; the RED: privacy/index.html's <style> block differs …
 #         <style> block byte-identical to index.html's;
@@ -520,18 +520,28 @@ s9() {
 }
 
 # ---------------------------------------------------------------------------
-# S-10 — privacy/index.html (P6-D-20): the four sentences verbatim, in Ferry's
+# S-10 — privacy/index.html (P6-D-20): the three sentences verbatim, in Ferry's
 # voice, loading nothing, under index.html's own <style> block, linked from
 # the landing page's footer. Its URL is the value of BETA_APP_PRIVACY_URL.
+# The record paragraph is WITHDRAWN (2026-10-03): the public app keeps no record
+# and has no "Send a report" (testing builds only), so the page must not say it
+# does. PRIVACY_WITHDRAWN_REGEX finds it, or a rewording of it, in the visible text.
 PRIVACY_1='Ferry has no account and no server of its own. Nothing about you or what you share is collected or sent to indiagram.'
 PRIVACY_2='What you share goes from your phone to the person you chose, encrypted on the way, and is not kept anywhere in between.'
-PRIVACY_3='Ferry keeps a short record on your phone of what it did, so you can send a report if something goes wrong. You choose when to send it and who gets it. It says what Ferry did and when, with names taken out, and it never includes your photos or files.'
 PRIVACY_4='Ferry has no analytics, no ads and no tracking. This page loads nothing from anywhere else.'
+PRIVACY_WITHDRAWN='Ferry keeps a short record on your phone of what it did, so you can send a report if something goes wrong. You choose when to send it and who gets it. It says what Ferry did and when, with names taken out, and it never includes your photos or files.'
+PRIVACY_WITHDRAWN_REGEX='short record|send a report|record on your phone'
 s10() {
   local rc=0 t s n str pat P=privacy/index.html
   # Controls on a synthetic privacy page: sentence 1 deleted must red the
-  # sentence check; `relay` inserted into a paragraph must red the never list.
-  printf '%s\n' "<p>$PRIVACY_1</p>" "<p>$PRIVACY_2</p>" "<p>$PRIVACY_3</p>" "<p>$PRIVACY_4</p>" > "$TMP/privacy-good.html"
+  # sentence check; `relay` inserted into a paragraph must red the never list;
+  # the withdrawn paragraph put back must red the withdrawn check.
+  printf '%s\n' "<p>$PRIVACY_1</p>" "<p>$PRIVACY_2</p>" "<p>$PRIVACY_4</p>" > "$TMP/privacy-good.html"
+  n=$(page_text "$TMP/privacy-good.html" | command grep -cEi "$PRIVACY_WITHDRAWN_REGEX" || true)
+  test "$n" -eq 0 || { red "control: the synthetic privacy page already carries the withdrawn paragraph ($n)"; return 1; }
+  printf '%s\n' "<p>$PRIVACY_1</p>" "<p>$PRIVACY_2</p>" "<p>$PRIVACY_WITHDRAWN</p>" "<p>$PRIVACY_4</p>" > "$TMP/privacy-withdrawn.html"
+  n=$(page_text "$TMP/privacy-withdrawn.html" | command grep -cEi "$PRIVACY_WITHDRAWN_REGEX" || true)
+  test "$n" -ge 1 || { red "control: the withdrawn check did not see the record paragraph put back ($n)"; return 1; }
   t=$(page_text "$TMP/privacy-good.html")
   n=$(printf '%s\n' "$t" | command grep -cF "$PRIVACY_1" || true)
   test "$n" -eq 1 || { red "control: the synthetic privacy page does not carry sentence 1 ($n)"; return 1; }
@@ -541,14 +551,16 @@ s10() {
   sed 's/no server of its own/no relay server of its own/' "$TMP/privacy-good.html" > "$TMP/privacy-relay.html"
   n=$(page_text "$TMP/privacy-relay.html" | command grep -cEi "$NEVER_REGEX" || true)
   test "$n" -eq 1 || { red "control: the never list did not see an inserted 'relay' in a privacy paragraph ($n)"; return 1; }
-  echo "    control ok (sentence 1 deleted reds: privacy sentence missing; an inserted 'relay' reds: 1 never-list hit)"
+  echo "    control ok (sentence 1 deleted reds: privacy sentence missing; an inserted 'relay' reds: 1 never-list hit; the record paragraph put back reds: withdrawn)"
   test -f "$P" || { red "no $P (P6-D-20; BETA_APP_PRIVACY_URL points here)"; return 1; }
   t=$(page_text "$P")
   s=$(strip_html "$P")
-  for str in "$PRIVACY_1" "$PRIVACY_2" "$PRIVACY_3" "$PRIVACY_4"; do
+  for str in "$PRIVACY_1" "$PRIVACY_2" "$PRIVACY_4"; do
     n=$(printf '%s\n' "$t" | command grep -cF "$str" || true)
     test "$n" -ge 1 || { red "privacy sentence missing: \"$str\""; rc=1; }
   done
+  n=$(printf '%s\n' "$t" | command grep -cEi "$PRIVACY_WITHDRAWN_REGEX" || true)
+  test "$n" -eq 0 || { red "$n line(s) on the privacy page describing the withdrawn record or 'Send a report' (expected 0 — the public app keeps no record, 2026-10-03)"; rc=1; }
   n=$(printf '%s\n' "$t" | command grep -cEi "$NEVER_REGEX" || true)
   test "$n" -eq 0 || { red "$n never-list hit(s) in the privacy page's visible text / content= values"; rc=1; }
   n=$(printf '%s\n' "$t" | command grep -cEi "$VOICE_REGEX" || true)
@@ -574,7 +586,7 @@ s10() {
   n=$(strip_html index.html | command grep -cF '<a href="/privacy">Privacy</a>' || true)
   test "$n" -eq 1 || { red "index.html footer link <a href=\"/privacy\">Privacy</a> = $n (expected exactly 1 — P6-D-20: linked from the footer)"; rc=1; }
   test "$rc" -eq 0 || return 1
-  echo "S-10 GREEN (privacy/index.html: the four sentences, never/voice lists 0, no script, no request, index.html's style block, 14 hex literals, the way back; the footer links /privacy)"
+  echo "S-10 GREEN (privacy/index.html: the three sentences, the withdrawn record paragraph 0, never/voice lists 0, no script, no request, index.html's style block, 14 hex literals, the way back; the footer links /privacy)"
 }
 
 # ---------------------------------------------------------------------------
