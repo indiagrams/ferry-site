@@ -1,10 +1,10 @@
 #!/bin/bash
-# site-gates.sh — the landing page's source gates, S-1..S-10 and S-14..S-16, in ui-gates.sh's idiom
+# site-gates.sh — the landing page's source gates, S-1..S-10 and S-14..S-17, in ui-gates.sh's idiom
 # (Ferry's scripts/ui-gates.sh: red(), rc=0 per gate, `|| true` on every count, a
 # $TMP from mktemp with a trap, `command grep`; controls FIRST — a gate is believed
 # only after its net has been seen to catch a mutation).
 #
-# Usage:  bash scripts/site-gates.sh                 # from the site root; all thirteen
+# Usage:  bash scripts/site-gates.sh                 # from the site root; all fourteen
 #         FERRY_SITE_GATES="s3 s7" bash scripts/site-gates.sh   # by name
 # Prints one `S-n GREEN (…)` line per gate, `RED: …` per failure, then
 # `==> site-gates: ok` or `==> site-gates: FAILED` (exit 1). perl, python3, sips,
@@ -67,9 +67,10 @@
 #   S-14  the fallback and the link STAY gone (D-17,     RED: the served set has a page S-14 does
 #         widened by ruling 38). The HTML set is           not cover: <path> …
 #         DISCOVERED (git ls-files '*.html') and must     RED: <f>: N line(s) carrying '<string>'
-#         equal S14_FILES — five pages, the four served   (expected 0 — …)
-#         copies plus the privacy page. In each: the five RED: <f>: N line(s) carrying the host
-#         strings above, zero; the TestFlight host, zero,  '<host>' case-insensitively …
+#         equal S14_FILES — six pages, the four served    (expected 0 — …)
+#         copies, the privacy and support pages. In each: RED: <f>: N line(s) carrying the host
+#         the five strings above, zero; the TestFlight     '<host>' case-insensitively …
+#         host, zero,
 #         CASE-INSENSITIVELY. And in each served copy the RED: <f>: the Get TestFlight button's
 #         Get TestFlight button's own host exactly once,   host … = N (expected exactly 1) …
 #         so no absence clause is satisfiable by deleting
@@ -83,6 +84,12 @@
 #         two approved paragraphs verbatim once; the     RED: rule not exactly once (0): …
 #         three rules and the user-agent switch written  RED: N line(s) carrying play.google.com
 #         exactly so; no Play link in the raw bytes        or market:// …
+#   S-17  support/index.html (Ferry 10.2.10's App Store  RED: no support/index.html (…)
+#         support URL): the one sentence; the one        RED: support/index.html: the address … = N
+#         address exactly once in the raw bytes, no      RED: support/index.html: N other
+#         other email-shaped string, no mailto, form or    email-shaped string(s) …
+#         embed; S-10's no-script, no-request, lists,
+#         lang, style block, 14 hex and way back
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -633,7 +640,7 @@ s10() {
 # S-14 reads HTML only — the discovery pattern is '*.html' and this file is .sh —
 # never a tree-wide glob, never itself. A gate that reds on its own source gets
 # weakened rather than fixed, which is how an absence gate dies.
-S14_FILES=(404.html i/index.html index.html o/index.html privacy/index.html)   # sorted
+S14_FILES=(404.html i/index.html index.html o/index.html privacy/index.html support/index.html)   # sorted
 S14_SERVED=(index.html 404.html i/index.html o/index.html)                     # the four copies
 S14_STRINGS=('location.hash' 'ferry://' 'testflight.apple.com/join' 'id="get-ferry"' 'id="open-ferry"')
 S14_HOST='testflight.apple.com'          # matched -iF: the host, whatever the path or the case
@@ -874,6 +881,91 @@ s16() {
 }
 
 # ---------------------------------------------------------------------------
+# S-17 — support/index.html, the support page Ferry's App Store listing names as
+# its support URL (Ferry Phase 10.2.10; ruled by ferry-operator, 2026-10-06, with
+# the one address the developer chose). One sentence naming ONE email address,
+# exactly once in the RAW bytes: as plain text, with no mailto (a mailto would be
+# the address a second time), no form, no other contact, nothing embedded. No
+# other email-shaped string anywhere in the raw bytes, a comment included. It loads
+# nothing, as the privacy page loads nothing (S-10's checks), and it wears
+# index.html's own <style> block. s17_check prints problem lines for a file (no RED
+# prefix), so the controls run the very code the verdict runs.
+SUPPORT_ADDR='contact@indiagram.com'
+SUPPORT_1="Questions, problems or feedback about Ferry? Email $SUPPORT_ADDR."
+EMAIL_ERE='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+s17_check() {
+  local f=$1 r t n pat
+  r=$(raw "$f")
+  t=$(page_text "$f")
+  n=$(printf '%s\n' "$t" | command grep -cF "$SUPPORT_1" || true)
+  test "$n" -eq 1 || echo "$f: the support sentence = $n (expected exactly 1, verbatim: \"$SUPPORT_1\")"
+  n=$(printf '%s\n' "$r" | command grep -oF "$SUPPORT_ADDR" | command grep -c . || true)
+  test "$n" -eq 1 || echo "$f: the address $SUPPORT_ADDR = $n in the raw bytes (expected exactly 1: one address, once, as plain text)"
+  n=$(printf '%s\n' "$r" | command grep -oE "$EMAIL_ERE" | command grep -cvxF "$SUPPORT_ADDR" || true)
+  test "$n" -eq 0 || echo "$f: $n other email-shaped string(s) in the raw bytes (expected 0: the page names one address)"
+  for pat in 'mailto:' 'tel:' '<form' '<input' '<iframe' '<img' '<object' '<embed'; do
+    n=$(printf '%s\n' "$r" | command grep -ciF "$pat" || true)
+    test "$n" -eq 0 || echo "$f: $n line(s) carrying '$pat' in the raw bytes (expected 0: no other contact, no form, nothing embedded)"
+  done
+  n=$(printf '%s\n' "$r" | command grep -c '<script' || true)
+  test "$n" -eq 0 || echo "$f: script blocks = $n in the raw bytes (expected 0: it loads and runs nothing)"
+  for pat in "${REQUEST_PATTERNS[@]}"; do
+    n=$(printf '%s\n' "$r" | command grep -cF "$pat" || true)
+    test "$n" -eq 0 || echo "$f: $n '$pat' in the raw bytes (expected 0: it makes no request)"
+  done
+  n=$(printf '%s\n' "$t" | command grep -cEi "$NEVER_REGEX" || true)
+  test "$n" -eq 0 || echo "$f: $n never-list hit(s) in the visible text / content= values"
+  n=$(printf '%s\n' "$t" | command grep -cEi "$VOICE_REGEX" || true)
+  test "$n" -eq 0 || echo "$f: $n word(s) outside Ferry's voice (beta/build/version/install/download/app store/expire)"
+  return 0
+}
+s17() {
+  local rc=0 s n out line P=support/index.html
+  # Controls on synthetic pages: the one sentence alone is silent; a mailto beside
+  # it reds twice (the address counted 2, and the mailto); another address planted
+  # INSIDE AN HTML COMMENT reds (a comment is served); a script src reds; the
+  # sentence deleted reds.
+  printf '%s\n' '<main>' "<p>$SUPPORT_1</p>" '</main>' > "$TMP/s17-good.html"
+  out=$(s17_check "$TMP/s17-good.html")
+  [ -z "$out" ] || { red "control: the synthetic support page printed a problem: $(echo $out)"; return 1; }
+  printf '%s\n' '<main>' "<p>$SUPPORT_1 <a href=\"mailto:$SUPPORT_ADDR\">Write</a></p>" '</main>' > "$TMP/s17-mailto.html"
+  out=$(s17_check "$TMP/s17-mailto.html")
+  { printf '%s\n' "$out" | command grep -qF "= 2 in the raw bytes" && printf '%s\n' "$out" | command grep -qF "'mailto:'"; } \
+    || { red "control: a mailto beside the sentence was not seen as the address twice and a mailto (got: '$(echo $out)')"; return 1; }
+  printf '%s\n' '<main>' "<p>$SUPPORT_1</p>" '<!-- old: someone.else@example.org -->' '</main>' > "$TMP/s17-other.html"
+  out=$(s17_check "$TMP/s17-other.html")
+  printf '%s\n' "$out" | command grep -qF "1 other email-shaped string(s)" \
+    || { red "control: another address planted inside an HTML comment was not seen (got: '$(echo $out)')"; return 1; }
+  printf '%s\n' '<main>' "<p>$SUPPORT_1</p>" '</main>' '<script src="https://example.org/x.js"></script>' > "$TMP/s17-script.html"
+  out=$(s17_check "$TMP/s17-script.html")
+  { printf '%s\n' "$out" | command grep -qF "script blocks = 1" && printf '%s\n' "$out" | command grep -qF "'<script src'"; } \
+    || { red "control: a planted script src was not seen as a script and a request (got: '$(echo $out)')"; return 1; }
+  printf '%s\n' '<main>' '<p>Questions? Write to us.</p>' '</main>' > "$TMP/s17-nosentence.html"
+  out=$(s17_check "$TMP/s17-nosentence.html")
+  { printf '%s\n' "$out" | command grep -qF "the support sentence = 0" && printf '%s\n' "$out" | command grep -qF "= 0 in the raw bytes"; } \
+    || { red "control: the sentence deleted was not seen (got: '$(echo $out)')"; return 1; }
+  echo "    control ok (the sentence alone is silent; a mailto beside it reds twice; another address inside a comment reds; a script src reds twice; the sentence deleted reds)"
+  test -f "$P" || { red "no $P (Ferry 10.2.10: the App Store listing's support URL is https://ferry.indiagram.com/support/)"; return 1; }
+  out=$(s17_check "$P")
+  if [ -n "$out" ]; then while IFS= read -r line; do red "$line"; done <<< "$out"; rc=1; fi
+  s=$(strip_html "$P")
+  n=$(command grep -c '<html lang="en">' "$P" || true)
+  test "$n" -eq 1 || { red "support html lang=en = $n"; rc=1; }
+  sed -n '/<style>/,/<\/style>/p' index.html > "$TMP/s17-style-index.css"
+  sed -n '/<style>/,/<\/style>/p' "$P" > "$TMP/s17-style-support.css"
+  test -s "$TMP/s17-style-support.css" && cmp -s "$TMP/s17-style-index.css" "$TMP/s17-style-support.css" \
+    || { red "support/index.html's <style> block differs from index.html's (one design — copy it)"; rc=1; }
+  n=$(printf '%s\n' "$s" | command grep -oE '#[0-9A-Fa-f]{3,8}\b' | command grep -c . || true)
+  test "$n" -eq 14 || { red "support hex colour literals = $n (expected exactly 14: the 12 variable values and the 2 theme-colors; the support page has no tile)"; rc=1; }
+  n=$(printf '%s\n' "$s" | command grep -cF '<a href="/">' || true)
+  test "$n" -eq 1 || { red "support <a href=\"/\"> = $n (expected exactly 1 — the way back)"; rc=1; }
+  n=$(printf '%s\n' "$s" | command grep -cF '<meta name="referrer" content="no-referrer">' || true)
+  test "$n" -eq 1 || { red "support referrer no-referrer meta = $n (expected 1)"; rc=1; }
+  test "$rc" -eq 0 || return 1
+  echo "S-17 GREEN ($P: the one sentence; $SUPPORT_ADDR once in the raw bytes and no other email-shaped string; no mailto, form or embed; no script, no request; never/voice lists 0; lang=en; index.html's style block; 14 hex literals; the way back; no-referrer)"
+}
+
+# ---------------------------------------------------------------------------
 # The runner (ui-gates.sh's): FERRY_SITE_GATES selects by name; a name that is
 # not a function is RED, not skipped — a typo must not print ok.
 #
@@ -886,7 +978,7 @@ s16() {
 # read the status. ui-gates.sh fixed this shape; the site gates get it in the
 # same commit as S-14, because a NEW absence gate is exactly the kind that can
 # die early and would have been believed.
-GATES="${FERRY_SITE_GATES:-s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s14 s15 s16}"
+GATES="${FERRY_SITE_GATES:-s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s14 s15 s16 s17}"
 for g in $GATES; do
   declare -F "$g" >/dev/null || { echo "RED: no gate named $g"; FAILED=1; continue; }
   "$g" || { FAILED=1; echo "RED: gate $g exited non-zero"; }
