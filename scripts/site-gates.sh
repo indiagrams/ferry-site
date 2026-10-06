@@ -1,10 +1,10 @@
 #!/bin/bash
-# site-gates.sh — the landing page's source gates, S-1..S-10, in ui-gates.sh's idiom
+# site-gates.sh — the landing page's source gates, S-1..S-10 and S-14..S-16, in ui-gates.sh's idiom
 # (Ferry's scripts/ui-gates.sh: red(), rc=0 per gate, `|| true` on every count, a
 # $TMP from mktemp with a trap, `command grep`; controls FIRST — a gate is believed
 # only after its net has been seen to catch a mutation).
 #
-# Usage:  bash scripts/site-gates.sh                 # from the site root; all eleven
+# Usage:  bash scripts/site-gates.sh                 # from the site root; all thirteen
 #         FERRY_SITE_GATES="s3 s7" bash scripts/site-gates.sh   # by name
 # Prints one `S-n GREEN (…)` line per gate, `RED: …` per failure, then
 # `==> site-gates: ok` or `==> site-gates: FAILED` (exit 1). perl, python3, sips,
@@ -75,6 +75,14 @@
 #         so no absence clause is satisfiable by deleting
 #         the page (this script carries every forbidden
 #         string itself: it reads *.html, never .sh, D-17)
+#   S-15  .well-known/assetlinks.json (ferry-android     RED: no .well-known/assetlinks.json — …
+#         A5.7.3): one statement, handle_all_urls,       RED: sha256_cert_fingerprints are [...]
+#         android_app com.indiagram.ferry, and the four    (expected exactly [...], by value …)
+#         SHA-256 fingerprints by value and in order
+#   S-16  the invite page serves Android (A5.7.3): the   RED: not exactly once (0): <p id=…
+#         two approved paragraphs verbatim once; the     RED: rule not exactly once (0): …
+#         three rules and the user-agent switch written  RED: N line(s) carrying play.google.com
+#         exactly so; no Play link in the raw bytes        or market:// …
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -733,6 +741,139 @@ s14() {
 }
 
 # ---------------------------------------------------------------------------
+# S-15 — the Digital Asset Links file (ferry-android A5.7.3, 2026-10-06). Android
+# verifies a Ferry build's /i/ and /o/ links at install or update by reading
+# /.well-known/assetlinks.json, and the build opens those links itself only when
+# the file names its package and the certificate the installed APK was signed
+# with. So the fingerprints are held BY VALUE, exactly these four and in this
+# order: Play's app-signing key in use; the previous app-signing key's classical
+# and quantum-ready certificates; and the upload key (ferry-android's
+# tools/upload-cert.sha256). One digit changed reds, and so does one dropped or
+# one added. Valid JSON, exactly one statement with only `relation` and `target`,
+# the relation handle_all_urls, the target android_app com.indiagram.ferry.
+# s15_check prints problem lines (no RED prefix), so the controls run the very
+# code the verdict runs.
+S15_FILE=.well-known/assetlinks.json
+S15_FPS=(
+  '78:17:84:49:9C:98:5B:CF:8D:97:6C:E4:7C:BC:AF:B8:6A:C6:54:73:A8:78:33:16:4F:9D:5A:44:CE:02:54:7B'
+  '84:D3:63:11:F8:17:7C:48:93:A2:CC:0A:B9:F3:9B:A5:D1:AB:D9:9C:05:E6:10:C9:A1:DF:BF:E0:51:D0:CA:45'
+  '59:4C:79:68:34:1A:25:57:0C:FE:45:F4:64:74:21:55:D4:2B:71:B6:56:FF:D6:04:CF:9D:D3:88:9B:B2:17:48'
+  '96:34:C5:CF:C3:0D:78:94:E6:03:76:AE:27:A5:32:21:1C:FA:F5:C8:25:25:F9:BE:4E:E3:EA:DB:52:C0:3C:67'
+)
+S15_PY='
+import json, sys
+want = sys.argv[2:]
+try:
+    j = json.load(open(sys.argv[1]))
+except ValueError:
+    print("assetlinks.json is not valid JSON"); sys.exit(0)
+if not isinstance(j, list) or len(j) != 1:
+    print("assetlinks.json is not a list of exactly 1 statement"); sys.exit(0)
+s = j[0]
+if not isinstance(s, dict) or sorted(s) != ["relation", "target"]:
+    print("the statement holds %r (expected exactly relation and target)" % (sorted(s) if isinstance(s, dict) else s)); sys.exit(0)
+if s["relation"] != ["delegate_permission/common.handle_all_urls"]:
+    print("relation is %r (expected exactly [%r])" % (s["relation"], "delegate_permission/common.handle_all_urls"))
+t = s["target"]
+if not isinstance(t, dict) or sorted(t) != ["namespace", "package_name", "sha256_cert_fingerprints"]:
+    print("the target holds %r (expected exactly namespace, package_name and sha256_cert_fingerprints)" % (sorted(t) if isinstance(t, dict) else t)); sys.exit(0)
+if t["namespace"] != "android_app":
+    print("namespace is %r (expected %r)" % (t["namespace"], "android_app"))
+if t["package_name"] != "com.indiagram.ferry":
+    print("package_name is %r (expected %r)" % (t["package_name"], "com.indiagram.ferry"))
+if t["sha256_cert_fingerprints"] != want:
+    print("sha256_cert_fingerprints are %r (expected exactly %r, by value and in order)" % (t["sha256_cert_fingerprints"], want))
+'
+s15_check() { python3 -c "$S15_PY" "$1" "${S15_FPS[@]}"; }
+# s15_json FP... — a statement in the served shape, holding the fingerprints given.
+s15_json() {
+  local fps
+  fps=$(printf '"%s",' "$@")
+  printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.indiagram.ferry","sha256_cert_fingerprints":[%s]}}]\n' "${fps%,}"
+}
+s15() {
+  local out line digit
+  # Controls on synthetic JSON: the good shape prints nothing; one digit changed
+  # in the in-use key reds; the upload key dropped reds; a fifth fingerprint
+  # reds; another package reds.
+  s15_json "${S15_FPS[@]}" > "$TMP/al-good.json"
+  digit="${S15_FPS[0]%B}C"
+  s15_json "$digit" "${S15_FPS[@]:1}" > "$TMP/al-digit.json"
+  s15_json "${S15_FPS[@]:0:3}" > "$TMP/al-three.json"
+  s15_json "${S15_FPS[@]}" "${S15_FPS[3]}" > "$TMP/al-five.json"
+  s15_json "${S15_FPS[@]}" | sed 's/com\.indiagram\.ferry/com.indiagram.ferrx/' > "$TMP/al-package.json"
+  out=$(s15_check "$TMP/al-good.json"); [ -z "$out" ] || { red "control: the good assetlinks shape printed a problem: $out"; return 1; }
+  out=$(s15_check "$TMP/al-digit.json"); printf '%s\n' "$out" | command grep -qF "54:7C'" || { red "control: one digit changed in the in-use key was not noticed (got: '$out')"; return 1; }
+  out=$(s15_check "$TMP/al-three.json"); printf '%s\n' "$out" | command grep -qF 'sha256_cert_fingerprints are' || { red "control: the upload key dropped was not noticed (got: '$out')"; return 1; }
+  out=$(s15_check "$TMP/al-five.json"); printf '%s\n' "$out" | command grep -qF 'sha256_cert_fingerprints are' || { red "control: a fifth fingerprint was not noticed (got: '$out')"; return 1; }
+  out=$(s15_check "$TMP/al-package.json"); printf '%s\n' "$out" | command grep -qF "package_name is 'com.indiagram.ferrx'" || { red "control: another package was not noticed (got: '$out')"; return 1; }
+  echo "    control ok (good shape silent; one digit changed, a key dropped, a fifth key and another package each red)"
+  test -f "$S15_FILE" || { red "no $S15_FILE — Android verifies a build's /i/ and /o/ links against it at install or update, and without it every invite link opens this page"; return 1; }
+  out=$(s15_check "$S15_FILE")
+  if [ -n "$out" ]; then while IFS= read -r line; do red "$line"; done <<< "$out"; return 1; fi
+  echo "S-15 GREEN ($S15_FILE: one statement, handle_all_urls, android_app com.indiagram.ferry, the ${#S15_FPS[@]} fingerprints by value and in order)"
+}
+
+# ---------------------------------------------------------------------------
+# S-16 — the invite page serves Android (ferry-android A5.7.3, 2026-10-06; the
+# copy approved by the developer). Under /i/ on Android the page shows the two
+# Android paragraphs, verbatim, in place of the TestFlight paragraph, its button
+# and the re-tap line; everywhere else they stay out of the accessibility tree.
+# The switch is the user agent, written exactly so, in the one inline script
+# (S-5); the rules are written exactly so. The iPhone copy is unchanged: S-6
+# holds its sentences, and S-2 and S-14 its button, which stays in the bytes
+# and is only hidden. No Play link: the person who sent the invite adds the
+# tester, so there is nothing to download from here — zero play.google.com and
+# zero market:// in the RAW bytes, case-insensitively.
+S16_TESTING='<p id="android-testing" class="android">Ferry for Android is in private testing on Google Play, and the person who sent you this link can ask for you to be added.</p>'
+S16_LINKS='<p id="android-links" class="android">Once Ferry is installed: open Ferry, tap Scan a code, and scan the code on the other person'"'"'s phone. Or turn on Ferry'"'"'s links: in Android'"'"'s Settings, open Apps, then Ferry, then Open by default (Set as default on Samsung), turn on Open supported links, and add this site'"'"'s links. Then go back to the message and tap the invite link again.</p>'
+S16_NONE='^    \.android \{ display: none; \}$'
+S16_SHOW='^    body\.is-invite\.is-android \.android \{ display: block; \}$'
+S16_HIDE='^    body\.is-invite\.is-android #testing, body\.is-invite\.is-android #get-testflight, body\.is-invite\.is-android #again \{ display: none; \}$'
+S16_SWITCH="if (navigator.userAgent.indexOf('Android') !== -1) { document.body.classList.add('is-android'); }"
+S16_STORE='play\.google\.com|market://'
+s16() {
+  local rc=0 s r n str pat
+  # Controls on synthetic lines: each rule pattern matches its own line; a show
+  # rule without body.is-invite counts 0 (the Android copy would leak off /i/);
+  # a paragraph deleted counts 0; a Play link planted in a comment is seen.
+  n=$(printf '%s\n' '    .android { display: none; }' | command grep -cE "$S16_NONE" || true)
+  test "$n" -eq 1 || { red "control: the hide-by-default pattern did not match its own line ($n)"; return 1; }
+  n=$(printf '%s\n' '    body.is-invite.is-android .android { display: block; }' | command grep -cE "$S16_SHOW" || true)
+  test "$n" -eq 1 || { red "control: the show pattern did not match its own line ($n)"; return 1; }
+  n=$(printf '%s\n' '    body.is-invite.is-android #testing, body.is-invite.is-android #get-testflight, body.is-invite.is-android #again { display: none; }' | command grep -cE "$S16_HIDE" || true)
+  test "$n" -eq 1 || { red "control: the TestFlight-hiding pattern did not match its own line ($n)"; return 1; }
+  n=$(printf '%s\n' '    body.is-android .android { display: block; }' | command grep -cE "$S16_SHOW" || true)
+  test "$n" -eq 0 || { red "control: a show rule without body.is-invite was counted ($n)"; return 1; }
+  printf '%s\n' '<main>' "    $S16_TESTING" "    $S16_LINKS" '</main>' > "$TMP/s16-both.html"
+  command grep -vF 'id="android-links"' "$TMP/s16-both.html" > "$TMP/s16-one.html"
+  n=$(command grep -cF "$S16_LINKS" "$TMP/s16-both.html" || true)
+  test "$n" -eq 1 || { red "control: the links paragraph was not counted on a \$TMP copy ($n)"; return 1; }
+  n=$(command grep -cF "$S16_LINKS" "$TMP/s16-one.html" || true)
+  test "$n" -eq 0 || { red "control: deleting the links paragraph left it findable ($n)"; return 1; }
+  printf '%s\n' '<main>ok</main>' '  <!-- <a href="https://Play.Google.com/store/apps/details?id=com.indiagram.ferry">Get Ferry</a> -->' > "$TMP/s16-store.html"
+  n=$(command grep -ciE "$S16_STORE" "$TMP/s16-store.html" || true)
+  test "$n" -eq 1 || { red "control: a commented, mixed-case Play link was not seen on a \$TMP copy ($n)"; return 1; }
+  echo "    control ok (the three rule patterns match their lines; a show rule without body.is-invite counts 0; a deleted paragraph counts 0; a commented, mixed-case Play link is seen)"
+  s=$(strip_html index.html)
+  r=$(raw index.html)
+  for str in "$S16_TESTING" "$S16_LINKS" "$S16_SWITCH"; do
+    n=$(printf '%s\n' "$s" | command grep -cF "$str" || true)
+    test "$n" -eq 1 || { red "not exactly once ($n): $str"; rc=1; }
+  done
+  for pat in "$S16_NONE" "$S16_SHOW" "$S16_HIDE"; do
+    n=$(printf '%s\n' "$s" | command grep -cE "$pat" || true)
+    test "$n" -eq 1 || { red "rule not exactly once ($n): $pat"; rc=1; }
+  done
+  n=$(printf '%s\n' "$s" | command grep -cF 'class="android"' || true)
+  test "$n" -eq 2 || { red "class=\"android\" = $n (expected exactly 2, the two Android paragraphs)"; rc=1; }
+  n=$(printf '%s\n' "$r" | command grep -ciE "$S16_STORE" || true)
+  test "$n" -eq 0 || { red "$n line(s) carrying play.google.com or market:// in the raw bytes (expected 0 — no Play link: the sender adds the tester)"; rc=1; }
+  test "$rc" -eq 0 || return 1
+  echo "S-16 GREEN (the two Android paragraphs verbatim, once; shown only under /i/ on Android, in place of the TestFlight paragraph, button and re-tap line; the user-agent switch once; no Play link in the raw bytes)"
+}
+
+# ---------------------------------------------------------------------------
 # The runner (ui-gates.sh's): FERRY_SITE_GATES selects by name; a name that is
 # not a function is RED, not skipped — a typo must not print ok.
 #
@@ -745,7 +886,7 @@ s14() {
 # read the status. ui-gates.sh fixed this shape; the site gates get it in the
 # same commit as S-14, because a NEW absence gate is exactly the kind that can
 # die early and would have been believed.
-GATES="${FERRY_SITE_GATES:-s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s14}"
+GATES="${FERRY_SITE_GATES:-s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s14 s15 s16}"
 for g in $GATES; do
   declare -F "$g" >/dev/null || { echo "RED: no gate named $g"; FAILED=1; continue; }
   "$g" || { FAILED=1; echo "RED: gate $g exited non-zero"; }

@@ -1,0 +1,15 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.indiagram.ferry",
+      "sha256_cert_fingerprints": [
+        "78:17:84:49:9C:98:5B:CF:8D:97:6C:E4:7C:BC:AF:B8:6A:C6:54:73:A8:78:33:16:4F:9D:5A:44:CE:02:54:7B",
+        "84:D3:63:11:F8:17:7C:48:93:A2:CC:0A:B9:F3:9B:A5:D1:AB:D9:9C:05:E6:10:C9:A1:DF:BF:E0:51:D0:CA:45",
+        "59:4C:79:68:34:1A:25:57:0C:FE:45:F4:64:74:21:55:D4:2B:71:B6:56:FF:D6:04:CF:9D:D3:88:9B:B2:17:48",
+        "96:34:C5:CF:C3:0D:78:94:E6:03:76:AE:27:A5:32:21:1C:FA:F5:C8:25:25:F9:BE:4E:E3:EA:DB:52:C0:3C:67"
+      ]
+    }
+  }
+]

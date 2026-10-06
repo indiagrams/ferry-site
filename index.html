@@ -39,6 +39,9 @@
     footer a { color: var(--accent); display: inline-block; min-height: 44px; line-height: 44px; }
     #invite, #again { display: none; }
     body.is-invite #invite, body.is-invite #again { display: block; }
+    .android { display: none; }
+    body.is-invite.is-android .android { display: block; }
+    body.is-invite.is-android #testing, body.is-invite.is-android #get-testflight, body.is-invite.is-android #again { display: none; }
   </style>
 </head>
 <body>
@@ -57,10 +60,13 @@
     <p id="testing">Ferry is in private testing through Apple's TestFlight app, and the person who sent you this link can ask for you to be added.</p>
     <a id="get-testflight" class="button prominent" href="https://apps.apple.com/app/testflight/id899247664">Get TestFlight</a>
     <p id="again">Then go back to the message and tap the invite link again. That's what pairs you.</p>
+    <p id="android-testing" class="android">Ferry for Android is in private testing on Google Play, and the person who sent you this link can ask for you to be added.</p>
+    <p id="android-links" class="android">Once Ferry is installed: open Ferry, tap Scan a code, and scan the code on the other person's phone. Or turn on Ferry's links: in Android's Settings, open Apps, then Ferry, then Open by default (Set as default on Samsung), turn on Open supported links, and add this site's links. Then go back to the message and tap the invite link again.</p>
     <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/privacy">Privacy</a></footer>
   </main>
   <script>
     if (location.pathname.indexOf('/i/') === 0) { document.body.classList.add('is-invite'); }
+    if (navigator.userAgent.indexOf('Android') !== -1) { document.body.classList.add('is-android'); }
   </script>
 </body>
 </html>

@@ -29,6 +29,9 @@
     footer a { color: var(--accent); display: inline-block; min-height: 44px; line-height: 44px; }
     #invite, #again { display: none; }
     body.is-invite #invite, body.is-invite #again { display: block; }
+    .android { display: none; }
+    body.is-invite.is-android .android { display: block; }
+    body.is-invite.is-android #testing, body.is-invite.is-android #get-testflight, body.is-invite.is-android #again { display: none; }
   </style>
 </head>
 <body>
