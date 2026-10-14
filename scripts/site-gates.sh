@@ -541,7 +541,9 @@ s9() {
 # The record paragraph is WITHDRAWN (2026-10-03): the public app keeps no record
 # and has no "Send a report" (testing builds only), so the page must not say it
 # does. PRIVACY_WITHDRAWN_REGEX finds it, or a rewording of it, in the visible text.
-PRIVACY_1='Ferry has no account and no server of its own. Nothing about you or what you share is collected or sent to indiagram.'
+# Sentence 1 reworded 2026-10-14 (Ferry 10.2.18's website stop): the App Store label declares one
+# Device ID, the ID Tailscale's servers see, so the page says indiagram is who collects nothing.
+PRIVACY_1='Ferry has no account and no server of its own. indiagram never collects or receives anything about you or what you share.'
 PRIVACY_2='What you share goes from your phone to the person you chose, encrypted on the way, and is not kept anywhere in between.'
 PRIVACY_4='Ferry has no analytics, no ads and no tracking. This page loads nothing from anywhere else.'
 PRIVACY_WITHDRAWN='Ferry keeps a short record on your phone of what it did, so you can send a report if something goes wrong. You choose when to send it and who gets it. It says what Ferry did and when, with names taken out, and it never includes your photos or files.'
