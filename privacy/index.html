@@ -37,9 +37,9 @@
 <body>
   <main>
     <h1>Privacy</h1>
-    <p>Ferry has no account and no server of its own. indiagram never collects or receives anything about you or what you share.</p>
-    <p>What you share goes from your phone to the person you chose, encrypted on the way, and is not kept anywhere in between.</p>
-    <p>To connect two phones, Ferry may go through servers that Tailscale runs. They see each phone's IP address and an ID Ferry made for it. Ferry uses these only to connect, and we don't know whether Tailscale keeps them.</p>
+    <p>Ferry has no account and no sign-in. What you share goes from your phone to the person you chose, encrypted on the way, and is not kept anywhere in between.</p>
+    <p>Apart from this website, the only servers Ferry runs are its own relays. When two phones cannot connect to each other directly, a relay passes the encrypted data along between them. A relay cannot read what it passes along, because only the two phones hold the keys. While a connection lasts, a relay sees the IP address and the relay key of each phone, when it connects and how much it sends. The relays keep nothing beyond serving each connection in real time: they write no logs, and no IP address, relay key or timing is stored.</p>
+    <p>The relays run in the United States, on servers rented from a hosting provider. Like any network operator, the hosting provider can see which IP addresses exchange traffic with those servers, when and how much, but it cannot read the data.</p>
     <p>Ferry has no analytics, no ads and no tracking. This page loads nothing from anywhere else.</p>
     <footer class="label">Made by <a href="https://indiagram.com">indiagram</a> · <a href="/">Ferry</a></footer>
   </main>
